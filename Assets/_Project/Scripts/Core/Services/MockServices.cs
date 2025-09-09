@@ -1,63 +1,15 @@
 using System;
 using Cysharp.Threading.Tasks;
 using WordPuzzle.Core.Services;
+using WordPuzzle.Data.Models; // Новый импорт
 
 namespace WordPuzzle.Core.Architecture
 {
-    /// <summary>
-    /// Мок сервиса уровней для этапа 1
-    /// Возвращает заглушечные данные для тестирования архитектуры
-    /// </summary>
-    public class MockLevelService : ILevelService
-    {
-        public bool IsInitialized { get; private set; }
-        
-        public async UniTask InitializeAsync()
-        {
-            GameLogger.LogInfo("MockLevelService", "Initializing mock level service...");
-            
-            // Имитация асинхронной загрузки
-            await UniTask.Delay(100);
-            
-            IsInitialized = true;
-            GameLogger.LogInfo("MockLevelService", "Mock level service initialized with 3 test levels");
-        }
-        
-        public void Dispose()
-        {
-            IsInitialized = false;
-            GameLogger.LogInfo("MockLevelService", "Mock level service disposed");
-        }
-        
-        public async UniTask<LevelData> LoadLevelAsync(int levelId)
-        {
-            GameLogger.LogInfo("MockLevelService", $"Loading mock level {levelId}");
-            
-            // Имитация загрузки
-            await UniTask.Delay(50);
-            
-            // Возвращаем тестовые данные
-            return new LevelData
-            {
-                LevelId = levelId,
-                TargetWords = new[] { "ТЕСТ", "МОКА", "ИГРА", "КОДУ" },
-                AvailableClusters = new[] { "ТЕ", "СТ", "МО", "КА", "ИГ", "РА", "КО", "ДУ" }
-            };
-        }
-        
-        public int GetTotalLevelsCount()
-        {
-            return 3; // Тестовое количество уровней
-        }
-        
-        public bool IsLevelExists(int levelId)
-        {
-            return levelId >= 1 && levelId <= 3;
-        }
-    }
+    // ПРИМЕЧАНИЕ: MockLevelService удален, так как заменен на настоящий LevelService
+    // Остальные моки сохраняются для следующих этапов
     
     /// <summary>
-    /// Мок сервиса прогресса для этапа 1
+    /// Мок сервиса прогресса для этапа 1-3
     /// </summary>
     public class MockProgressService : IProgressService
     {
@@ -125,7 +77,7 @@ namespace WordPuzzle.Core.Architecture
     }
     
     /// <summary>
-    /// Мок сервиса UI для этапа 1
+    /// Мок сервиса UI для этапа 1-3
     /// </summary>
     public class MockUIService : IUIService
     {

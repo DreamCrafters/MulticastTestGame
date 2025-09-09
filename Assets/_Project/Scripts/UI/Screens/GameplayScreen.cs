@@ -17,33 +17,34 @@ namespace WordPuzzle.UI.Screens
         [SerializeField] private Button _mockWinButton; // Временная кнопка для тестирования
         [SerializeField] private TextMeshProUGUI _levelInfoText;
         [SerializeField] private TextMeshProUGUI _placeholderText;
-        
+
         [Header("Settings")]
         [SerializeField] private string _placeholderMessage = "Gameplay will be implemented in later stages.\nFor now, use buttons to test navigation.";
-        
+
         private int _currentLevelId;
-        
+
         protected override string ScreenName => "Gameplay";
-        
-        /// <summary>
-        /// Инициализация игрового экрана
-        /// </summary>
+
+        // ТАКЖЕ ДОБАВИТЬ в OnInitialize() GameplayScreen.cs вызов загрузки:
         protected override void OnInitialize()
         {
             GameLogger.LogInfo(ScreenName, "Setting up Gameplay screen...");
-            
+
             // Получаем параметры уровня из SceneService
             LoadLevelParameters();
-            
+
             // Настройка UI элементов
             SetupUI();
-            
+
             // Настройка кнопки возврата в Android
             enableBackButton = true;
-            
+
+            // НОВОЕ: Загружаем данные уровня для демонстрации
+            LoadLevelDataAsync();
+
             GameLogger.LogInfo(ScreenName, "Gameplay screen setup completed");
         }
-        
+
         /// <summary>
         /// Подписка на события UI
         /// </summary>
@@ -57,7 +58,7 @@ namespace WordPuzzle.UI.Screens
             {
                 GameLogger.LogWarning(ScreenName, "Back to Menu button is not assigned!");
             }
-            
+
             if (_mockWinButton != null)
             {
                 _mockWinButton.onClick.AddListener(OnMockWinClicked);
@@ -67,7 +68,7 @@ namespace WordPuzzle.UI.Screens
                 GameLogger.LogWarning(ScreenName, "Mock Win button is not assigned!");
             }
         }
-        
+
         /// <summary>
         /// Отписка от событий UI
         /// </summary>
@@ -77,13 +78,13 @@ namespace WordPuzzle.UI.Screens
             {
                 _backToMenuButton.onClick.RemoveListener(OnBackToMenuClicked);
             }
-            
+
             if (_mockWinButton != null)
             {
                 _mockWinButton.onClick.RemoveListener(OnMockWinClicked);
             }
         }
-        
+
         /// <summary>
         /// Загрузка параметров уровня
         /// </summary>
@@ -92,7 +93,7 @@ namespace WordPuzzle.UI.Screens
             try
             {
                 var parameters = SceneService.GetSceneParameters<MainMenuScreen.GameplayParameters>();
-                
+
                 if (parameters != null)
                 {
                     _currentLevelId = parameters.LevelId;
@@ -111,7 +112,7 @@ namespace WordPuzzle.UI.Screens
                 _currentLevelId = 1;
             }
         }
-        
+
         /// <summary>
         /// Настройка UI элементов
         /// </summary>
@@ -122,13 +123,13 @@ namespace WordPuzzle.UI.Screens
             {
                 _levelInfoText.text = $"Level {_currentLevelId}";
             }
-            
+
             // Настройка заглушки
             if (_placeholderText != null)
             {
                 _placeholderText.text = _placeholderMessage;
             }
-            
+
             // Настройка кнопок
             if (_backToMenuButton != null)
             {
@@ -138,7 +139,7 @@ namespace WordPuzzle.UI.Screens
                     buttonText.text = "Back to Menu";
                 }
             }
-            
+
             if (_mockWinButton != null)
             {
                 var buttonText = _mockWinButton.GetComponentInChildren<TextMeshProUGUI>();
@@ -148,28 +149,30 @@ namespace WordPuzzle.UI.Screens
                 }
             }
         }
-        
+
         /// <summary>
         /// Обработка кнопки возврата в меню
         /// </summary>
         private void OnBackToMenuClicked()
         {
             GameLogger.LogInfo(ScreenName, "Back to Menu button clicked");
-            
+
             // Показываем диалог подтверждения
             UIService.ShowConfirmDialog(
-                "Exit Level", 
+                "Exit Level",
                 "Are you sure you want to exit the level? Progress will be lost.",
-                onConfirm: () => {
+                onConfirm: () =>
+                {
                     GameLogger.LogInfo(ScreenName, "Confirmed exit to main menu");
                     LoadSceneSafe(SceneNames.MainMenu);
                 },
-                onCancel: () => {
+                onCancel: () =>
+                {
                     GameLogger.LogInfo(ScreenName, "Cancelled exit to main menu");
                 }
             );
         }
-        
+
         /// <summary>
         /// Обработка кнопки "Назад" Android
         /// </summary>
@@ -178,19 +181,19 @@ namespace WordPuzzle.UI.Screens
             GameLogger.LogInfo(ScreenName, "Android back button pressed");
             OnBackToMenuClicked(); // Используем ту же логику что и кнопка меню
         }
-        
+
         /// <summary>
         /// Временная кнопка для тестирования победы
         /// </summary>
         private void OnMockWinClicked()
         {
             GameLogger.LogInfo(ScreenName, "Mock Win button clicked - simulating level completion");
-            
+
             try
             {
                 // Имитируем завершение уровня
                 var mockCompletedWords = new string[] { "MOCK", "TEST", "WORD", "DONE" };
-                
+
                 // Создаем параметры для экрана победы
                 var victoryParameters = new VictoryScreen.VictoryParameters
                 {
@@ -198,10 +201,10 @@ namespace WordPuzzle.UI.Screens
                     CompletedWords = mockCompletedWords,
                     CompletionTime = 120.5f // 2 минуты для примера
                 };
-                
+
                 // Отмечаем уровень как пройденный (для тестирования)
                 _ = ProgressService.MarkLevelCompletedAsync(_currentLevelId, mockCompletedWords);
-                
+
                 // Переходим на экран победы
                 LoadSceneWithParametersSafe(SceneNames.Victory, victoryParameters);
             }
@@ -211,22 +214,43 @@ namespace WordPuzzle.UI.Screens
                 UIService.ShowMessage("Failed to complete level test.", 3f);
             }
         }
-        
+
         /// <summary>
-        /// Асинхронная загрузка данных уровня для будущих этапов
+        /// Асинхронная загрузка данных уровня для демонстрации работы LevelService
         /// </summary>
         private async void LoadLevelDataAsync()
         {
             try
             {
                 GameLogger.LogInfo(ScreenName, $"Loading level {_currentLevelId} data...");
-                
+
                 var levelData = await LevelService.LoadLevelAsync(_currentLevelId);
-                
+
                 if (levelData != null)
                 {
-                    GameLogger.LogInfo(ScreenName, $"Level data loaded: {levelData.TargetWords.Length} words, {levelData.AvailableClusters.Length} clusters");
-                    
+                    GameLogger.LogInfo(ScreenName,
+                        $"Level data loaded successfully: {levelData.TargetWords.Length} words, {levelData.AvailableClusters.Length} clusters");
+
+                    // Выводим информацию о загруженном уровне в консоль для проверки
+                    GameLogger.LogInfo(ScreenName, $"Target words:");
+                    foreach (var wordData in levelData.TargetWords)
+                    {
+                        GameLogger.LogInfo(ScreenName, $"  - {wordData.Word} = [{string.Join(", ", wordData.Clusters)}]");
+                    }
+
+                    GameLogger.LogInfo(ScreenName, $"Available clusters: [{string.Join(", ", levelData.AvailableClusters)}]");
+
+                    // Обновляем UI с реальными данными
+                    if (_levelInfoText != null)
+                    {
+                        _levelInfoText.text = $"Level {levelData.LevelId}\n{levelData.TargetWords.Length} words, {levelData.AvailableClusters.Length} clusters";
+                    }
+
+                    if (_placeholderText != null)
+                    {
+                        _placeholderText.text = "Real level data loaded!\nCheck console for details.\n\nGameplay will be implemented in later stages.";
+                    }
+
                     // Здесь в будущих этапах будет инициализация игрового поля
                     // InitializeGameField(levelData);
                 }

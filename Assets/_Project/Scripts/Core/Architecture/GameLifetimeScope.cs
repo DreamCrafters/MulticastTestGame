@@ -55,8 +55,10 @@ namespace WordPuzzle.Core.Architecture
             builder.Register<ISceneService, SceneService>(Lifetime.Singleton);
             builder.Register<UINavigationService>(Lifetime.Singleton);
 
-            // Регистрация оставшихся моков
-            builder.Register<ILevelService, MockLevelService>(Lifetime.Singleton);
+            // ЭТАП 3: Регистрация настоящего LevelService
+            builder.Register<ILevelService, LevelService>(Lifetime.Singleton);
+
+            // Регистрация оставшихся моков для этапа 4
             builder.Register<IProgressService, MockProgressService>(Lifetime.Singleton);
             builder.Register<IUIService, MockUIService>(Lifetime.Singleton);
 

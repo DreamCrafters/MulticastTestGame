@@ -1,5 +1,6 @@
 using Cysharp.Threading.Tasks;
 using WordPuzzle.Core.Architecture;
+using WordPuzzle.Data.Models; // Новый импорт для моделей данных
 
 namespace WordPuzzle.Core.Services
 {
@@ -28,16 +29,5 @@ namespace WordPuzzle.Core.Services
         /// <param name="levelId">Идентификатор уровня</param>
         /// <returns>true если уровень существует</returns>
         bool IsLevelExists(int levelId);
-    }
-    
-    /// <summary>
-    /// Временная заглушка для данных уровня
-    /// Будет заменена в этапе 3
-    /// </summary>
-    public class LevelData
-    {
-        public int LevelId { get; set; }
-        public string[] TargetWords { get; set; } = new string[0];
-        public string[] AvailableClusters { get; set; } = new string[0];
     }
 }
