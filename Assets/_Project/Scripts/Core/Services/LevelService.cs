@@ -4,6 +4,7 @@ using Cysharp.Threading.Tasks;
 using Newtonsoft.Json;
 using UnityEngine;
 using WordPuzzle.Core.Architecture;
+using WordPuzzle.Data.Models;
 
 namespace WordPuzzle.Core.Services
 {
