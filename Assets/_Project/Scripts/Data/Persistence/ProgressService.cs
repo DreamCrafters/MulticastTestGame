@@ -223,13 +223,13 @@ namespace WordPuzzle.Data.Persistence
         /// </summary>
         private async UniTask SaveProgressAsync()
         {
-            await UniTask.RunOnThreadPool(() =>
+            // Switch to main thread for PlayerPrefs operations
+            await UniTask.SwitchToMainThread();
+            
+            lock (_saveLock)
             {
-                lock (_saveLock)
-                {
-                    SaveProgressSync();
-                }
-            });
+                SaveProgressSync();
+            }
         }
         
         /// <summary>
