@@ -1,4 +1,3 @@
-
 using System;
 using Cysharp.Threading.Tasks;
 using WordPuzzle.Core.Architecture;
@@ -219,6 +218,50 @@ namespace WordPuzzle.Data.Persistence
         }
         
         /// <summary>
+        /// Принудительное сохранение прогресса (синхронное, для событий приложения)
+        /// </summary>
+        public void ForceSaveProgress()
+        {
+            if (!IsInitialized)
+            {
+                GameLogger.LogWarning("ProgressService", "Cannot force save - service not initialized");
+                return;
+            }
+
+            lock (_saveLock)
+            {
+                SaveProgressSync();
+            }
+        }
+        
+        /// <summary>
+        /// Принудительная перезагрузка прогресса из сохранения (для обновления UI)
+        /// </summary>
+        public async UniTask RefreshProgressAsync()
+        {
+            if (!IsInitialized)
+            {
+                GameLogger.LogWarning("ProgressService", "Cannot refresh progress - service not initialized");
+                return;
+            }
+
+            try
+            {
+                GameLogger.LogInfo("ProgressService", "Refreshing progress from disk...");
+                
+                // Перезагружаем прогресс из диска
+                await LoadProgressAsync();
+                
+                GameLogger.LogInfo("ProgressService", $"Progress refreshed. Completed levels: {_currentProgress.CompletedLevelsCount}");
+            }
+            catch (Exception ex)
+            {
+                GameLogger.LogException("ProgressService", ex);
+                throw;
+            }
+        }
+        
+        /// <summary>
         /// Асинхронное сохранение прогресса
         /// </summary>
         private async UniTask SaveProgressAsync()
@@ -268,7 +311,14 @@ namespace WordPuzzle.Data.Persistence
             var saveInfo = SaveData.GetSaveInfo();
             var currentInfo = $"Current Progress:\nCompleted Levels: {_currentProgress.CompletedLevelsCount}\nNext Level: {_currentProgress.GetNextLevelNumber()}\nLast Save: {_currentProgress.LastSaveTime:yyyy-MM-dd HH:mm:ss}";
             
-            return $"{currentInfo}\n\n{saveInfo}";
+            // Добавляем информацию о конкретных пройденных уровнях
+            var levelsInfo = "Completed Levels Details:\n";
+            foreach (var kvp in _currentProgress.CompletedLevels)
+            {
+                levelsInfo += $"  Level {kvp.Key}: {string.Join(", ", kvp.Value.CompletedWords)}\n";
+            }
+            
+            return $"{currentInfo}\n\n{levelsInfo}\n{saveInfo}";
         }
     }
 }

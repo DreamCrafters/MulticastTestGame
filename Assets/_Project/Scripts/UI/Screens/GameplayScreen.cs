@@ -8,15 +8,16 @@ namespace WordPuzzle.UI.Screens
 {
     /// <summary>
     /// Экран игрового процесса
-    /// На данном этапе содержит заглушки для тестирования навигации
+    /// ИСПРАВЛЕНО: правильное сохранение прогресса при завершении уровня
     /// </summary>
     public class GameplayScreen : BaseScreen
     {
         [Header("UI Elements")]
         [SerializeField] private Button _backToMenuButton;
-        [SerializeField] private Button _mockWinButton; // Временная кнопка для тестирования
+        [SerializeField] private Button _mockWinButton;
         [SerializeField] private TextMeshProUGUI _levelInfoText;
         [SerializeField] private TextMeshProUGUI _placeholderText;
+        [SerializeField] private TextMeshProUGUI _progressInfoText; // НОВОЕ
 
         [Header("Settings")]
         [SerializeField] private string _placeholderMessage = "Gameplay will be implemented in later stages.\nFor now, use buttons to test navigation.";
@@ -29,48 +30,28 @@ namespace WordPuzzle.UI.Screens
         {
             GameLogger.LogInfo(ScreenName, "Setting up Gameplay screen...");
 
-            // Получаем параметры уровня из SceneService
             LoadLevelParameters();
-
-            // Настройка UI элементов
             SetupUI();
-
-            // Настройка кнопки возврата в Android
+            ShowProgressInfo(); // НОВОЕ
             enableBackButton = true;
-
-            // Загружаем данные уровня для демонстрации
             LoadLevelDataAsync();
 
             GameLogger.LogInfo(ScreenName, "Gameplay screen setup completed");
         }
 
-        /// <summary>
-        /// Подписка на события UI
-        /// </summary>
         protected override void SubscribeToUIEvents()
         {
             if (_backToMenuButton != null)
             {
                 _backToMenuButton.onClick.AddListener(OnBackToMenuClicked);
             }
-            else
-            {
-                GameLogger.LogWarning(ScreenName, "Back to Menu button is not assigned!");
-            }
 
             if (_mockWinButton != null)
             {
                 _mockWinButton.onClick.AddListener(OnMockWinClicked);
             }
-            else
-            {
-                GameLogger.LogWarning(ScreenName, "Mock Win button is not assigned!");
-            }
         }
 
-        /// <summary>
-        /// Отписка от событий UI
-        /// </summary>
         protected override void UnsubscribeFromUIEvents()
         {
             if (_backToMenuButton != null)
@@ -84,9 +65,6 @@ namespace WordPuzzle.UI.Screens
             }
         }
 
-        /// <summary>
-        /// Загрузка параметров уровня
-        /// </summary>
         private void LoadLevelParameters()
         {
             try
@@ -102,25 +80,8 @@ namespace WordPuzzle.UI.Screens
                 }
                 else
                 {
-                    // Значения по умолчанию если параметры не переданы
                     _currentLevelId = 1;
                     GameLogger.LogWarning(ScreenName, "No level parameters found, using default level 1");
-                    
-                    // Дополнительная отладочная информация
-                    GameLogger.LogInfo(ScreenName, "Debug: Checking SceneService state...");
-                    if (SceneService != null)
-                    {
-                        string currentScene = SceneService.GetCurrentSceneName();
-                        GameLogger.LogInfo(ScreenName, $"Debug: Current scene name: {currentScene}");
-                        
-                        // Попробуем получить любые параметры
-                        var anyParams = SceneService.GetSceneParameters<object>();
-                        GameLogger.LogInfo(ScreenName, $"Debug: Any parameters found: {anyParams?.GetType().Name ?? "null"}");
-                    }
-                    else
-                    {
-                        GameLogger.LogError(ScreenName, "Debug: SceneService is null!");
-                    }
                 }
             }
             catch (System.Exception ex)
@@ -131,24 +92,18 @@ namespace WordPuzzle.UI.Screens
             }
         }
 
-        /// <summary>
-        /// Настройка UI элементов
-        /// </summary>
         private void SetupUI()
         {
-            // Настройка информации об уровне
             if (_levelInfoText != null)
             {
                 _levelInfoText.text = $"Level {_currentLevelId}";
             }
 
-            // Настройка заглушки
             if (_placeholderText != null)
             {
                 _placeholderText.text = _placeholderMessage;
             }
 
-            // Настройка кнопок
             if (_backToMenuButton != null)
             {
                 var buttonText = _backToMenuButton.GetComponentInChildren<TextMeshProUGUI>();
@@ -169,13 +124,38 @@ namespace WordPuzzle.UI.Screens
         }
 
         /// <summary>
-        /// Обработка кнопки возврата в меню
+        /// НОВОЕ: Отображение информации о прогрессе для отладки
         /// </summary>
+        private void ShowProgressInfo()
+        {
+            if (_progressInfoText == null) return;
+
+            try
+            {
+                if (ProgressService?.IsInitialized == true)
+                {
+                    int completedLevels = ProgressService.GetCompletedLevelsCount();
+                    int currentLevel = ProgressService.GetCurrentLevelNumber();
+                    bool isCurrentCompleted = ProgressService.IsLevelCompleted(_currentLevelId);
+
+                    _progressInfoText.text = $"Progress Info:\nCompleted: {completedLevels}\nCurrent: {currentLevel}\nThis level completed: {isCurrentCompleted}";
+                }
+                else
+                {
+                    _progressInfoText.text = "Progress Service not available";
+                }
+            }
+            catch (System.Exception ex)
+            {
+                GameLogger.LogException(ScreenName, ex);
+                _progressInfoText.text = "Error loading progress info";
+            }
+        }
+
         private void OnBackToMenuClicked()
         {
             GameLogger.LogInfo(ScreenName, "Back to Menu button clicked");
 
-            // Показываем диалог подтверждения
             UIService.ShowConfirmDialog(
                 "Exit Level",
                 "Are you sure you want to exit the level? Progress will be lost.",
@@ -191,39 +171,47 @@ namespace WordPuzzle.UI.Screens
             );
         }
 
-        /// <summary>
-        /// Обработка кнопки "Назад" Android
-        /// </summary>
         protected override void OnBackButtonPressed()
         {
             GameLogger.LogInfo(ScreenName, "Android back button pressed");
-            OnBackToMenuClicked(); // Используем ту же логику что и кнопка меню
+            OnBackToMenuClicked();
         }
 
         /// <summary>
-        /// Временная кнопка для тестирования победы
+        /// ИСПРАВЛЕНО: Правильное сохранение прогресса при завершении уровня
         /// </summary>
-        private void OnMockWinClicked()
+        private async void OnMockWinClicked()
         {
             GameLogger.LogInfo(ScreenName, "Mock Win button clicked - simulating level completion");
 
             try
             {
-                // Имитируем завершение уровня
-                var mockCompletedWords = new string[] { "ТЕСТ", "СЛОВ", "ПОБЕД", "ЭТАП" };
+                // Имитируем завершение уровня с реалистичными словами
+                var mockCompletedWords = new string[] { "КЛАСТЕР", "ПРОЕКТ", "ЗАДАЧА", "ИГРОКА" };
+
+                // ИСПРАВЛЕНО: Сначала сохраняем прогресс, затем переходим на экран победы
+                GameLogger.LogInfo(ScreenName, $"Marking level {_currentLevelId} as completed...");
+                
+                await ProgressService.MarkLevelCompletedAsync(_currentLevelId, mockCompletedWords);
+                
+                GameLogger.LogInfo(ScreenName, $"Level {_currentLevelId} marked as completed successfully");
+
+                // Проверяем что прогресс действительно сохранился
+                bool isCompleted = ProgressService.IsLevelCompleted(_currentLevelId);
+                int newCompletedCount = ProgressService.GetCompletedLevelsCount();
+                int newCurrentLevel = ProgressService.GetCurrentLevelNumber();
+                
+                GameLogger.LogInfo(ScreenName, $"Progress verification: completed={isCompleted}, total={newCompletedCount}, next={newCurrentLevel}");
 
                 // Создаем параметры для экрана победы
                 var victoryParameters = new VictoryScreen.VictoryParameters
                 {
                     LevelId = _currentLevelId,
                     CompletedWords = mockCompletedWords,
-                    CompletionTime = 120.5f // 2 минуты для примера
+                    CompletionTime = 120.5f
                 };
 
                 GameLogger.LogInfo(ScreenName, $"Creating victory parameters for level {_currentLevelId}");
-
-                // Отмечаем уровень как пройденный (для тестирования)
-                _ = ProgressService.MarkLevelCompletedAsync(_currentLevelId, mockCompletedWords);
 
                 // Переходим на экран победы
                 LoadSceneWithParametersSafe(SceneNames.Victory, victoryParameters);
@@ -235,9 +223,6 @@ namespace WordPuzzle.UI.Screens
             }
         }
 
-        /// <summary>
-        /// Асинхронная загрузка данных уровня для демонстрации работы LevelService
-        /// </summary>
         private async void LoadLevelDataAsync()
         {
             try
@@ -251,7 +236,7 @@ namespace WordPuzzle.UI.Screens
                     GameLogger.LogInfo(ScreenName,
                         $"Level data loaded successfully: {levelData.TargetWords.Length} words, {levelData.AvailableClusters.Length} clusters");
 
-                    // Выводим информацию о загруженном уровне в консоль для проверки
+                    // Выводим информацию о загруженном уровне
                     GameLogger.LogInfo(ScreenName, $"Target words:");
                     foreach (var wordData in levelData.TargetWords)
                     {
@@ -268,11 +253,11 @@ namespace WordPuzzle.UI.Screens
 
                     if (_placeholderText != null)
                     {
-                        _placeholderText.text = "Real level data loaded!\nCheck console for details.\n\nGameplay will be implemented in later stages.";
+                        _placeholderText.text = "Real level data loaded!\nCheck console for details.\n\nUse 'Mock Win' to test progress system.";
                     }
 
-                    // Здесь в будущих этапах будет инициализация игрового поля
-                    // InitializeGameField(levelData);
+                    // Обновляем информацию о прогрессе
+                    ShowProgressInfo();
                 }
                 else
                 {

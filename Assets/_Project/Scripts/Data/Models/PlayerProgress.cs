@@ -98,9 +98,14 @@ namespace WordPuzzle.Data.Models
         {
             if (CompletedLevels.Count == 0) return 1;
             
-            // Находим максимальный пройденный уровень и возвращаем следующий
-            int maxCompletedLevel = CompletedLevels.Keys.Max();
-            return maxCompletedLevel + 1;
+            // Находим первый непройденный уровень, начиная с 1
+            int currentLevel = 1;
+            while (CompletedLevels.ContainsKey(currentLevel))
+            {
+                currentLevel++;
+            }
+            
+            return currentLevel;
         }
         
         /// <summary>
