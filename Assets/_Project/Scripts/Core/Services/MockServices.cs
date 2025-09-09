@@ -125,78 +125,6 @@ namespace WordPuzzle.Core.Architecture
     }
     
     /// <summary>
-    /// Мок сервиса сцен для этапа 1
-    /// </summary>
-    public class MockSceneService : ISceneService
-    {
-        public bool IsInitialized { get; private set; }
-        private string _currentScene = SceneNames.Bootstrap;
-        private object _sceneParameters;
-        
-        public event Action<string> OnSceneLoadStarted;
-        public event Action<string> OnSceneLoadCompleted;
-        
-        public async UniTask InitializeAsync()
-        {
-            GameLogger.LogInfo("MockSceneService", "Initializing mock scene service...");
-            
-            await UniTask.Delay(30);
-            
-            IsInitialized = true;
-            GameLogger.LogInfo("MockSceneService", "Mock scene service initialized");
-        }
-        
-        public void Dispose()
-        {
-            IsInitialized = false;
-            OnSceneLoadStarted = null;
-            OnSceneLoadCompleted = null;
-            GameLogger.LogInfo("MockSceneService", "Mock scene service disposed");
-        }
-        
-        public async UniTask LoadSceneAsync(string sceneName, bool showLoadingScreen = true)
-        {
-            GameLogger.LogInfo("MockSceneService", $"Loading scene: {sceneName} (loading screen: {showLoadingScreen})");
-            
-            OnSceneLoadStarted?.Invoke(sceneName);
-            
-            // Имитация загрузки сцены
-            await UniTask.Delay(200);
-            
-            _currentScene = sceneName;
-            _sceneParameters = null;
-            
-            OnSceneLoadCompleted?.Invoke(sceneName);
-            GameLogger.LogInfo("MockSceneService", $"Scene {sceneName} loaded successfully");
-        }
-        
-        public async UniTask LoadSceneAsync(string sceneName, object sceneParameters)
-        {
-            GameLogger.LogInfo("MockSceneService", $"Loading scene: {sceneName} with parameters");
-            
-            OnSceneLoadStarted?.Invoke(sceneName);
-            
-            await UniTask.Delay(200);
-            
-            _currentScene = sceneName;
-            _sceneParameters = sceneParameters;
-            
-            OnSceneLoadCompleted?.Invoke(sceneName);
-            GameLogger.LogInfo("MockSceneService", $"Scene {sceneName} loaded with parameters");
-        }
-        
-        public string GetCurrentSceneName()
-        {
-            return _currentScene;
-        }
-        
-        public T GetSceneParameters<T>() where T : class
-        {
-            return _sceneParameters as T;
-        }
-    }
-    
-    /// <summary>
     /// Мок сервиса UI для этапа 1
     /// </summary>
     public class MockUIService : IUIService
@@ -252,6 +180,18 @@ namespace WordPuzzle.Core.Architecture
         public void PlayUISound(UISoundType soundType)
         {
             GameLogger.LogInfo("MockUIService", $"Playing UI sound: {soundType}");
+        }
+        
+        public void NotifyScreenOpened(string screenName)
+        {
+            GameLogger.LogInfo("MockUIService", $"Screen opened: {screenName}");
+            OnScreenOpened?.Invoke(screenName);
+        }
+        
+        public void NotifyScreenClosed(string screenName)
+        {
+            GameLogger.LogInfo("MockUIService", $"Screen closed: {screenName}");
+            OnScreenClosed?.Invoke(screenName);
         }
     }
 }

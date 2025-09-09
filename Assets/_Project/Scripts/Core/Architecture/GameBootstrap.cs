@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using VContainer.Unity;
 using WordPuzzle.Core.Services;
+using WordPuzzle.UI.Navigation;
 
 namespace WordPuzzle.Core.Architecture
 {
@@ -12,11 +13,11 @@ namespace WordPuzzle.Core.Architecture
     /// </summary>
     public class GameBootstrap : IStartable, IDisposable
     {
-        // Инжекция всех сервисов через конструктор
         private readonly ILevelService _levelService;
         private readonly IProgressService _progressService;
         private readonly ISceneService _sceneService;
         private readonly IUIService _uiService;
+        private readonly UINavigationService _navigationService;
         
         private readonly List<IGameService> _allServices;
         private bool _isInitialized = false;
@@ -29,12 +30,14 @@ namespace WordPuzzle.Core.Architecture
             ILevelService levelService,
             IProgressService progressService,
             ISceneService sceneService,
-            IUIService uiService)
+            IUIService uiService,
+            UINavigationService navigationService)
         {
             _levelService = levelService;
             _progressService = progressService;
             _sceneService = sceneService;
             _uiService = uiService;
+            _navigationService = navigationService;
             
             // Сохраняем ссылки на все сервисы для групповых операций
             _allServices = new List<IGameService>
@@ -42,7 +45,8 @@ namespace WordPuzzle.Core.Architecture
                 _levelService,
                 _progressService,
                 _sceneService,
-                _uiService
+                _uiService,
+                _navigationService
             };
             
             GameLogger.LogInfo("GameBootstrap", "GameBootstrap constructor completed");

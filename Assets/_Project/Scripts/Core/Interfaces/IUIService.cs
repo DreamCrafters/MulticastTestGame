@@ -58,6 +58,18 @@ namespace WordPuzzle.Core.Services
         /// </summary>
         /// <param name="soundType">Тип звука</param>
         void PlayUISound(UISoundType soundType);
+        
+        /// <summary>
+        /// Уведомляет о том, что экран был открыт
+        /// </summary>
+        /// <param name="screenName">Название экрана</param>
+        void NotifyScreenOpened(string screenName);
+        
+        /// <summary>
+        /// Уведомляет о том, что экран был закрыт
+        /// </summary>
+        /// <param name="screenName">Название экрана</param>
+        void NotifyScreenClosed(string screenName);
     }
     
     /// <summary>
