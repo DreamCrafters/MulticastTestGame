@@ -14,12 +14,12 @@ namespace WordPuzzle.Core.Services
         /// Событие начала загрузки сцены
         /// </summary>
         event Action<string> OnSceneLoadStarted;
-        
+
         /// <summary>
         /// Событие завершения загрузки сцены
         /// </summary>
         event Action<string> OnSceneLoadCompleted;
-        
+
         /// <summary>
         /// Загружает сцену асинхронно
         /// </summary>
@@ -27,7 +27,7 @@ namespace WordPuzzle.Core.Services
         /// <param name="showLoadingScreen">Показывать ли экран загрузки</param>
         /// <returns>Задача загрузки</returns>
         UniTask LoadSceneAsync(string sceneName, bool showLoadingScreen = true);
-        
+
         /// <summary>
         /// Загружает сцену с передачей параметров
         /// </summary>
@@ -35,21 +35,26 @@ namespace WordPuzzle.Core.Services
         /// <param name="sceneParameters">Параметры для передачи в сцену</param>
         /// <returns>Задача загрузки</returns>
         UniTask LoadSceneAsync(string sceneName, object sceneParameters);
-        
+
         /// <summary>
         /// Получает имя текущей активной сцены
         /// </summary>
         /// <returns>Имя сцены</returns>
         string GetCurrentSceneName();
-        
+
         /// <summary>
         /// Получает параметры, переданные в текущую сцену
         /// </summary>
         /// <typeparam name="T">Тип параметров</typeparam>
         /// <returns>Параметры или default(T)</returns>
         T GetSceneParameters<T>() where T : class;
+
+        /// <summary>
+        /// Очистка параметров сцены (вызывается при переходе без параметров)
+        /// </summary>
+        public void ClearSceneParameters();
     }
-    
+
     /// <summary>
     /// Константы имен сцен для избежания магических строк
     /// </summary>

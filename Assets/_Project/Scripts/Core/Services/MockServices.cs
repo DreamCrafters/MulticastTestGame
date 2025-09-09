@@ -4,11 +4,9 @@ using WordPuzzle.Core.Services;
 
 namespace WordPuzzle.Core.Architecture
 {
-    // ПРИМЕЧАНИЕ: MockLevelService удален, так как заменен на настоящий LevelService
-    // Остальные моки сохраняются для следующих этапов
-    
     /// <summary>
-    /// Мок сервиса UI для этапа 1-3
+    /// Мок сервиса UI для этапов 1-4
+    /// Будет заменен на настоящий UIService в следующих этапах
     /// </summary>
     public class MockUIService : IUIService
     {
@@ -53,6 +51,8 @@ namespace WordPuzzle.Core.Architecture
         public void ShowConfirmDialog(string title, string message, Action onConfirm = null, Action onCancel = null)
         {
             GameLogger.LogInfo("MockUIService", $"Showing confirm dialog: {title} - {message}");
+            GameLogger.LogInfo("MockUIService", "Auto-confirming dialog (mock behavior)");
+            onConfirm?.Invoke();
         }
         
         public void SetBackButtonActive(bool isActive, Action onBackPressed = null)

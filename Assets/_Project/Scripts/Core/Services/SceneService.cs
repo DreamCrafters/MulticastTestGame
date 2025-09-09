@@ -126,7 +126,8 @@ namespace WordPuzzle.Core.Services
                 }
                 
                 _currentSceneName = sceneName;
-                _currentSceneParameters = null;
+                // ИСПРАВЛЕНО: НЕ сбрасываем параметры если они уже установлены через LoadSceneAsync(sceneName, parameters)
+                // _currentSceneParameters = null; // УБРАНО!
                 
                 GameLogger.LogInfo("SceneService", $"Scene {sceneName} loaded successfully");
                 OnSceneLoadCompleted?.Invoke(sceneName);
@@ -152,11 +153,14 @@ namespace WordPuzzle.Core.Services
         {
             GameLogger.LogInfo("SceneService", $"Loading scene {sceneName} with parameters: {sceneParameters?.GetType().Name ?? "null"}");
             
-            // Сохраняем параметры перед загрузкой
+            // ИСПРАВЛЕНО: Сохраняем параметры перед загрузкой
             _currentSceneParameters = sceneParameters;
             
-            // Загружаем сцену с экраном загрузки
+            // ИСПРАВЛЕНО: После установки параметров загружаем сцену
             await LoadSceneAsync(sceneName, showLoadingScreen: true);
+            
+            // Логируем для отладки
+            GameLogger.LogInfo("SceneService", $"Scene {sceneName} loaded with parameters. Current parameters: {_currentSceneParameters?.GetType().Name ?? "null"}");
         }
         
         /// <summary>
@@ -172,7 +176,28 @@ namespace WordPuzzle.Core.Services
         /// </summary>
         public T GetSceneParameters<T>() where T : class
         {
-            return _currentSceneParameters as T;
+            var result = _currentSceneParameters as T;
+            
+            // Логируем для отладки
+            if (result != null)
+            {
+                GameLogger.LogInfo("SceneService", $"Retrieved scene parameters: {typeof(T).Name}");
+            }
+            else
+            {
+                GameLogger.LogWarning("SceneService", $"Failed to retrieve scene parameters of type {typeof(T).Name}. Current parameters: {_currentSceneParameters?.GetType().Name ?? "null"}");
+            }
+            
+            return result;
+        }
+        
+        /// <summary>
+        /// Очистка параметров сцены (вызывается при переходе без параметров)
+        /// </summary>
+        public void ClearSceneParameters()
+        {
+            GameLogger.LogInfo("SceneService", "Clearing scene parameters");
+            _currentSceneParameters = null;
         }
         
         /// <summary>

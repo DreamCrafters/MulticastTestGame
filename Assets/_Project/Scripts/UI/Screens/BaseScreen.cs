@@ -161,7 +161,7 @@ namespace WordPuzzle.UI.Screens
             {
                 UIService?.PlayUISound(UISoundType.ButtonClick);
                 GameLogger.LogInfo(ScreenName, $"Loading scene: {sceneName}");
-                
+                SceneService.ClearSceneParameters();
                 await SceneService.LoadSceneAsync(sceneName);
             }
             catch (System.Exception ex)
@@ -184,6 +184,7 @@ namespace WordPuzzle.UI.Screens
                 UIService?.PlayUISound(UISoundType.ButtonClick);
                 GameLogger.LogInfo(ScreenName, $"Loading scene: {sceneName} with parameters");
                 
+                // ИСПРАВЛЕНО: Параметры будут установлены в SceneService.LoadSceneAsync(sceneName, parameters)
                 await SceneService.LoadSceneAsync(sceneName, parameters);
             }
             catch (System.Exception ex)

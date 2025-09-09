@@ -94,11 +94,15 @@ namespace WordPuzzle.UI.Screens
         {
             try
             {
+                GameLogger.LogInfo(ScreenName, "Attempting to load victory parameters...");
+                
                 _victoryParameters = SceneService.GetSceneParameters<VictoryParameters>();
                 
                 if (_victoryParameters != null)
                 {
-                    GameLogger.LogInfo(ScreenName, $"Loaded victory parameters: Level {_victoryParameters.LevelId}, {_victoryParameters.CompletedWords.Length} words");
+                    GameLogger.LogInfo(ScreenName, $"Successfully loaded victory parameters: Level {_victoryParameters.LevelId}, {_victoryParameters.CompletedWords.Length} words");
+                    GameLogger.LogInfo(ScreenName, $"Completed words: [{string.Join(", ", _victoryParameters.CompletedWords)}]");
+                    GameLogger.LogInfo(ScreenName, $"Completion time: {_victoryParameters.CompletionTime:F1}s");
                 }
                 else
                 {
@@ -106,10 +110,26 @@ namespace WordPuzzle.UI.Screens
                     _victoryParameters = new VictoryParameters
                     {
                         LevelId = 1,
-                        CompletedWords = new string[] { "TEST", "DATA", "MOCK", "WORD" },
+                        CompletedWords = new string[] { "ТЕСТ", "ДАНН", "МОКД", "СЛОВ" },
                         CompletionTime = 60f
                     };
                     GameLogger.LogWarning(ScreenName, "No victory parameters found, using mock data");
+                    
+                    // Дополнительная отладочная информация
+                    GameLogger.LogInfo(ScreenName, "Debug: Checking SceneService state...");
+                    if (SceneService != null)
+                    {
+                        string currentScene = SceneService.GetCurrentSceneName();
+                        GameLogger.LogInfo(ScreenName, $"Debug: Current scene name: {currentScene}");
+                        
+                        // Попробуем получить любые параметры
+                        var anyParams = SceneService.GetSceneParameters<object>();
+                        GameLogger.LogInfo(ScreenName, $"Debug: Any parameters found: {anyParams?.GetType().Name ?? "null"}");
+                    }
+                    else
+                    {
+                        GameLogger.LogError(ScreenName, "Debug: SceneService is null!");
+                    }
                 }
             }
             catch (System.Exception ex)
@@ -123,6 +143,7 @@ namespace WordPuzzle.UI.Screens
                     CompletedWords = new string[] { "ERROR" },
                     CompletionTime = 0f
                 };
+                GameLogger.LogWarning(ScreenName, "Exception occurred while loading parameters, using fallback data");
             }
         }
         
@@ -225,7 +246,9 @@ namespace WordPuzzle.UI.Screens
         {
             // Проверяем доступность следующего уровня
             int nextLevelId = _victoryParameters.LevelId + 1;
-            bool hasNextLevel = LevelService.IsLevelExists(nextLevelId);
+            bool hasNextLevel = LevelService != null && LevelService.IsLevelExists(nextLevelId);
+            
+            GameLogger.LogInfo(ScreenName, $"Checking next level {nextLevelId}: exists = {hasNextLevel}");
             
             if (_nextLevelButton != null)
             {
@@ -248,7 +271,7 @@ namespace WordPuzzle.UI.Screens
                 }
             }
             
-            GameLogger.LogInfo(ScreenName, $"Buttons setup: Next level available = {hasNextLevel}");
+            GameLogger.LogInfo(ScreenName, $"Buttons setup completed: Next level available = {hasNextLevel}");
         }
         
         /// <summary>
@@ -270,6 +293,14 @@ namespace WordPuzzle.UI.Screens
             try
             {
                 int nextLevelId = _victoryParameters.LevelId + 1;
+                
+                if (LevelService == null)
+                {
+                    GameLogger.LogError(ScreenName, "LevelService is null!");
+                    UIService.ShowMessage("Service error. Returning to menu.", 3f);
+                    LoadSceneSafe(SceneNames.MainMenu);
+                    return;
+                }
                 
                 if (LevelService.IsLevelExists(nextLevelId) == false)
                 {

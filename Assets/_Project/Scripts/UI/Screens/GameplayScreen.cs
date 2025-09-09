@@ -25,7 +25,6 @@ namespace WordPuzzle.UI.Screens
 
         protected override string ScreenName => "Gameplay";
 
-        // ТАКЖЕ ДОБАВИТЬ в OnInitialize() GameplayScreen.cs вызов загрузки:
         protected override void OnInitialize()
         {
             GameLogger.LogInfo(ScreenName, "Setting up Gameplay screen...");
@@ -39,7 +38,7 @@ namespace WordPuzzle.UI.Screens
             // Настройка кнопки возврата в Android
             enableBackButton = true;
 
-            // НОВОЕ: Загружаем данные уровня для демонстрации
+            // Загружаем данные уровня для демонстрации
             LoadLevelDataAsync();
 
             GameLogger.LogInfo(ScreenName, "Gameplay screen setup completed");
@@ -92,24 +91,43 @@ namespace WordPuzzle.UI.Screens
         {
             try
             {
+                GameLogger.LogInfo(ScreenName, "Attempting to load level parameters...");
+                
                 var parameters = SceneService.GetSceneParameters<MainMenuScreen.GameplayParameters>();
 
                 if (parameters != null)
                 {
                     _currentLevelId = parameters.LevelId;
-                    GameLogger.LogInfo(ScreenName, $"Loaded level parameters: Level {_currentLevelId}");
+                    GameLogger.LogInfo(ScreenName, $"Successfully loaded level parameters: Level {_currentLevelId}");
                 }
                 else
                 {
                     // Значения по умолчанию если параметры не переданы
                     _currentLevelId = 1;
                     GameLogger.LogWarning(ScreenName, "No level parameters found, using default level 1");
+                    
+                    // Дополнительная отладочная информация
+                    GameLogger.LogInfo(ScreenName, "Debug: Checking SceneService state...");
+                    if (SceneService != null)
+                    {
+                        string currentScene = SceneService.GetCurrentSceneName();
+                        GameLogger.LogInfo(ScreenName, $"Debug: Current scene name: {currentScene}");
+                        
+                        // Попробуем получить любые параметры
+                        var anyParams = SceneService.GetSceneParameters<object>();
+                        GameLogger.LogInfo(ScreenName, $"Debug: Any parameters found: {anyParams?.GetType().Name ?? "null"}");
+                    }
+                    else
+                    {
+                        GameLogger.LogError(ScreenName, "Debug: SceneService is null!");
+                    }
                 }
             }
             catch (System.Exception ex)
             {
                 GameLogger.LogException(ScreenName, ex);
                 _currentLevelId = 1;
+                GameLogger.LogWarning(ScreenName, "Exception occurred while loading parameters, using default level 1");
             }
         }
 
@@ -192,7 +210,7 @@ namespace WordPuzzle.UI.Screens
             try
             {
                 // Имитируем завершение уровня
-                var mockCompletedWords = new string[] { "MOCK", "TEST", "WORD", "DONE" };
+                var mockCompletedWords = new string[] { "ТЕСТ", "СЛОВ", "ПОБЕД", "ЭТАП" };
 
                 // Создаем параметры для экрана победы
                 var victoryParameters = new VictoryScreen.VictoryParameters
@@ -201,6 +219,8 @@ namespace WordPuzzle.UI.Screens
                     CompletedWords = mockCompletedWords,
                     CompletionTime = 120.5f // 2 минуты для примера
                 };
+
+                GameLogger.LogInfo(ScreenName, $"Creating victory parameters for level {_currentLevelId}");
 
                 // Отмечаем уровень как пройденный (для тестирования)
                 _ = ProgressService.MarkLevelCompletedAsync(_currentLevelId, mockCompletedWords);
