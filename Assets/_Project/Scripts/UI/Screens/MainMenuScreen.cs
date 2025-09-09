@@ -95,6 +95,22 @@ namespace WordPuzzle.UI.Screens
                 return;
             }
             
+            // Проверяем доступность сервиса прогресса
+            if (ProgressService == null)
+            {
+                GameLogger.LogWarning(ScreenName, "ProgressService not available yet - showing placeholder text");
+                _levelCounterText.text = "Levels Completed: --";
+                return;
+            }
+            
+            // Проверяем инициализацию сервиса
+            if (!ProgressService.IsInitialized)
+            {
+                GameLogger.LogWarning(ScreenName, "ProgressService not initialized yet - showing placeholder text");
+                _levelCounterText.text = "Levels Completed: --";
+                return;
+            }
+            
             try
             {
                 int completedLevels = ProgressService.GetCompletedLevelsCount();
@@ -119,6 +135,22 @@ namespace WordPuzzle.UI.Screens
             if (_playButton == null)
             {
                 GameLogger.LogWarning(ScreenName, "Play button is not assigned!");
+                return;
+            }
+            
+            // Проверяем доступность сервисов
+            if (LevelService == null || ProgressService == null)
+            {
+                GameLogger.LogWarning(ScreenName, "Services not available yet - disabling Play button");
+                _playButton.interactable = false;
+                return;
+            }
+            
+            // Проверяем инициализацию сервисов
+            if (!LevelService.IsInitialized || !ProgressService.IsInitialized)
+            {
+                GameLogger.LogWarning(ScreenName, "Services not initialized yet - disabling Play button");
+                _playButton.interactable = false;
                 return;
             }
             
