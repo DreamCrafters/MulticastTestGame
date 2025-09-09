@@ -3,6 +3,7 @@ using VContainer;
 using VContainer.Unity;
 using WordPuzzle.Core.Services;
 using WordPuzzle.UI.Navigation;
+using WordPuzzle.Data.Persistence;
 
 namespace WordPuzzle.Core.Architecture
 {
@@ -55,9 +56,9 @@ namespace WordPuzzle.Core.Architecture
             builder.Register<ISceneService, SceneService>(Lifetime.Singleton);
             builder.Register<UINavigationService>(Lifetime.Singleton);
             builder.Register<ILevelService, LevelService>(Lifetime.Singleton);
+            builder.Register<IProgressService, ProgressService>(Lifetime.Singleton);
 
             // Регистрация оставшихся моков для этапа 4
-            builder.Register<IProgressService, MockProgressService>(Lifetime.Singleton);
             builder.Register<IUIService, MockUIService>(Lifetime.Singleton);
 
             if (_enableDebugLogging)
