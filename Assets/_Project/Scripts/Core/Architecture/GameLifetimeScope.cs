@@ -46,14 +46,23 @@ namespace WordPuzzle.Core.Architecture
         /// <param name="builder">Билдер контейнера</param>
         private void RegisterCoreServices(IContainerBuilder builder)
         {
+            if (_enableDebugLogging)
+            {
+                GameLogger.LogInfo("GameLifetimeScope", "Registering core services...");
+            }
+
+            // Регистрация реальных сервисов этапа 2
             builder.Register<ISceneService, SceneService>(Lifetime.Singleton);
+            builder.Register<UINavigationService>(Lifetime.Singleton);
+
+            // Регистрация оставшихся моков
             builder.Register<ILevelService, MockLevelService>(Lifetime.Singleton);
             builder.Register<IProgressService, MockProgressService>(Lifetime.Singleton);
             builder.Register<IUIService, MockUIService>(Lifetime.Singleton);
 
             if (_enableDebugLogging)
             {
-                GameLogger.LogInfo("GameLifetimeScope", "Registering core services...");
+                GameLogger.LogInfo("GameLifetimeScope", "Core services registered");
             }
         }
 

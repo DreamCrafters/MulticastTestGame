@@ -127,38 +127,29 @@ namespace WordPuzzle.UI.Screens
         }
         
         /// <summary>
-        /// Переопределяемый метод инициализации для наследников
-        /// </summary>
-        protected virtual void OnInitialize()
-        {
-            // Переопределяется в наследниках
-        }
-        
-        /// <summary>
         /// Переопределяемый метод очистки для наследников
         /// </summary>
         protected virtual void OnCleanup()
         {
-            // Переопределяется в наследниках
+            // Пустая реализация по умолчанию
         }
-        
+
+        /// <summary>
+        /// Переопределяемый метод инициализации для наследников
+        /// </summary>
+        protected abstract void OnInitialize();
+
         /// <summary>
         /// Подписка на события UI
         /// Переопределяется в наследниках
         /// </summary>
-        protected virtual void SubscribeToUIEvents()
-        {
-            // Переопределяется в наследниках
-        }
-        
+        protected abstract void SubscribeToUIEvents();
+
         /// <summary>
         /// Отписка от событий UI
         /// Переопределяется в наследниках
         /// </summary>
-        protected virtual void UnsubscribeFromUIEvents()
-        {
-            // Переопределяется в наследниках
-        }
+        protected abstract void UnsubscribeFromUIEvents();
         
         /// <summary>
         /// Безопасная загрузка сцены с обработкой ошибок
