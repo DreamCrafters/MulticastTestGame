@@ -1,0 +1,60 @@
+{
+  "essential_packages": {
+    "VContainer": {
+      "url": "https://github.com/hadashiA/VContainer.git?path=VContainer/Assets/VContainer",
+      "version": "1.15.4",
+      "justification": "Fastest Unity DI container, 5-10x faster than Zenject, zero GC allocation, essential for scalable architecture"
+    },
+    "MessagePipe": {
+      "url": "https://github.com/Cysharp/MessagePipe.git?path=src/MessagePipe.Unity/Assets/Plugins/MessagePipe",
+      "version": "1.7.5",
+      "justification": "High-performance messaging for MVP communication, integrates perfectly with VContainer and UniTask"
+    },
+    "UniTask": {
+      "url": "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask",
+      "version": "2.5.0",
+      "justification": "Zero-allocation async/await for Unity, replaces coroutines with better performance and error handling"
+    },
+    "Newtonsoft.Json": {
+      "package": "com.unity.nuget.newtonsoft-json",
+      "version": "3.2.1",
+      "justification": "Robust JSON serialization for level data and game progress persistence"
+    }
+  },
+  "mobile_optimization_packages": {
+    "Addressables": {
+      "package": "com.unity.addressables",
+      "version": "1.21.19",
+      "justification": "Async asset loading and memory management, crucial for mobile performance and future server level loading"
+    },
+    "Unity UI Toolkit": {
+      "package": "com.unity.ui.toolkit",
+      "version": "1.0.0-preview.18",
+      "justification": "Modern UI system with better mobile performance than uGUI, supports data binding"
+    }
+  },
+  "development_packages": {
+    "Unity Test Framework": {
+      "package": "com.unity.test-framework",
+      "version": "1.5.1",
+      "justification": "Essential for testing MVP architecture and services, already included"
+    },
+    "Memory Profiler": {
+      "package": "com.unity.memoryprofiler",
+      "version": "1.1.0",
+      "justification": "Critical for mobile memory optimization and leak detection"
+    }
+  },
+  "future_extensibility_packages": {
+    "Unity Netcode": {
+      "package": "com.unity.netcode.gameobjects",
+      "version": "1.7.1",
+      "justification": "For future multiplayer features or server synchronization"
+    },
+    "Unity Analytics": {
+      "package": "com.unity.analytics",
+      "version": "5.0.0",
+      "justification": "Player behavior tracking for level difficulty balancing"
+    }
+  }
+}
