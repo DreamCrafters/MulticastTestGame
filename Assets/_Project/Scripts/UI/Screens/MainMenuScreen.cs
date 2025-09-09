@@ -100,7 +100,7 @@ namespace WordPuzzle.UI.Screens
         }
         
         /// <summary>
-        /// ИСПРАВЛЕНО: Обновление счетчика с лучшей обработкой ошибок
+        /// ИСПРАВЛЕНО: Обновление счетчика с учетом завершения всех уровней
         /// </summary>
         private void UpdateLevelCounter()
         {
@@ -112,21 +112,37 @@ namespace WordPuzzle.UI.Screens
             
             try
             {
-                // Проверяем доступность и инициализацию сервиса
-                if (ProgressService?.IsInitialized == true)
+                // Проверяем доступность и инициализацию сервисов
+                if (ProgressService?.IsInitialized == true && LevelService?.IsInitialized == true)
                 {
                     int completedLevels = ProgressService.GetCompletedLevelsCount();
+                    int totalLevels = LevelService.GetTotalLevelsCount();
                     int currentLevel = ProgressService.GetCurrentLevelNumber();
                     
-                    string counterText = string.Format(_levelCounterFormat, completedLevels);
+                    string counterText;
+                    
+                    // Проверяем, завершены ли все уровни
+                    if (ProgressService.AreAllLevelsCompleted(totalLevels) && totalLevels > 0)
+                    {
+                        counterText = $"Игра завершена! ({completedLevels}/{totalLevels})";
+                    }
+                    else if (totalLevels > 0)
+                    {
+                        counterText = $"Пройдено уровней: {completedLevels}/{totalLevels}";
+                    }
+                    else
+                    {
+                        counterText = string.Format(_levelCounterFormat, completedLevels);
+                    }
+                    
                     _levelCounterText.text = counterText;
                     
-                    GameLogger.LogInfo(ScreenName, $"Level counter updated: {completedLevels} completed, current: {currentLevel}");
+                    GameLogger.LogInfo(ScreenName, $"Level counter updated: {completedLevels} completed of {totalLevels}, current: {currentLevel}");
                 }
                 else
                 {
                     _levelCounterText.text = "Levels Completed: --";
-                    GameLogger.LogWarning(ScreenName, "ProgressService not available or not initialized");
+                    GameLogger.LogWarning(ScreenName, "Services not available or not initialized");
                 }
             }
             catch (System.Exception ex)
@@ -137,7 +153,7 @@ namespace WordPuzzle.UI.Screens
         }
         
         /// <summary>
-        /// ИСПРАВЛЕНО: Улучшенная настройка кнопки Play
+        /// ИСПРАВЛЕНО: Улучшенная настройка кнопки Play с учетом завершения всех уровней
         /// </summary>
         private void SetupPlayButton()
         {
@@ -155,6 +171,7 @@ namespace WordPuzzle.UI.Screens
                 if (!servicesReady)
                 {
                     _playButton.interactable = false;
+                    UpdatePlayButtonText("Loading...");
                     GameLogger.LogWarning(ScreenName, "Services not ready - disabling Play button");
                     return;
                 }
@@ -163,22 +180,49 @@ namespace WordPuzzle.UI.Screens
                 int totalLevels = LevelService.GetTotalLevelsCount();
                 bool hasLevels = totalLevels > 0;
                 
-                _playButton.interactable = hasLevels;
-                
-                if (hasLevels)
+                if (!hasLevels)
                 {
-                    int currentLevel = ProgressService.GetCurrentLevelNumber();
-                    GameLogger.LogInfo(ScreenName, $"Play button ready. Current level: {currentLevel} of {totalLevels}");
+                    _playButton.interactable = false;
+                    UpdatePlayButtonText("No Levels");
+                    GameLogger.LogWarning(ScreenName, "No levels available - Play button disabled");
+                    return;
+                }
+                
+                _playButton.interactable = true;
+                
+                // Проверяем, завершены ли все уровни
+                if (ProgressService.AreAllLevelsCompleted(totalLevels))
+                {
+                    UpdatePlayButtonText("Play Again");
+                    GameLogger.LogInfo(ScreenName, $"All {totalLevels} levels completed - showing restart option");
                 }
                 else
                 {
-                    GameLogger.LogWarning(ScreenName, "No levels available - Play button disabled");
+                    int currentLevel = ProgressService.GetCurrentLevelNumber();
+                    UpdatePlayButtonText("Play");
+                    GameLogger.LogInfo(ScreenName, $"Play button ready. Current level: {currentLevel} of {totalLevels}");
                 }
             }
             catch (System.Exception ex)
             {
                 GameLogger.LogException(ScreenName, ex);
                 _playButton.interactable = false;
+                UpdatePlayButtonText("Error");
+            }
+        }
+        
+        /// <summary>
+        /// НОВОЕ: Обновление текста кнопки Play
+        /// </summary>
+        private void UpdatePlayButtonText(string text)
+        {
+            if (_playButton != null)
+            {
+                var buttonText = _playButton.GetComponentInChildren<TextMeshProUGUI>();
+                if (buttonText != null)
+                {
+                    buttonText.text = text;
+                }
             }
         }
         
@@ -198,11 +242,12 @@ namespace WordPuzzle.UI.Screens
                 GameLogger.LogInfo(ScreenName, $"Current level from ProgressService: {currentLevel}");
                 GameLogger.LogInfo(ScreenName, $"Total levels available: {totalLevels}");
                 
-                // Логика "если пройдены все уровни, то снова запускается первый"
-                if (currentLevel > totalLevels)
+                // Проверяем, завершены ли все уровни
+                if (ProgressService.AreAllLevelsCompleted(totalLevels))
                 {
-                    currentLevel = 1;
-                    GameLogger.LogInfo(ScreenName, "All levels completed, restarting from level 1");
+                    GameLogger.LogInfo(ScreenName, "All levels completed - showing restart confirmation");
+                    ShowGameCompletionDialog(totalLevels);
+                    return;
                 }
                 
                 // Проверяем существование уровня
@@ -215,14 +260,8 @@ namespace WordPuzzle.UI.Screens
                 
                 GameLogger.LogInfo(ScreenName, $"Starting level {currentLevel}");
                 
-                // Создаем параметры для передачи в игровую сцену
-                var gameplayParameters = new GameplayParameters
-                {
-                    LevelId = currentLevel
-                };
-                
-                // Загружаем игровую сцену с параметрами
-                LoadSceneWithParametersSafe(SceneNames.Gameplay, gameplayParameters);
+                // Запускаем найденный уровень
+                StartLevel(currentLevel);
             }
             catch (System.Exception ex)
             {
@@ -306,6 +345,84 @@ namespace WordPuzzle.UI.Screens
                 // В случае ошибки просто обновляем UI с текущими данными
                 UpdateLevelCounter();
                 SetupPlayButton();
+            }
+        }
+        
+        /// <summary>
+        /// НОВОЕ: Показать диалог завершения всех уровней
+        /// </summary>
+        private void ShowGameCompletionDialog(int totalLevels)
+        {
+            string title = "Поздравляем!";
+            string message = $"Вы прошли все {totalLevels} уровней!\n\nХотите начать игру заново?";
+            
+            UIService.ShowConfirmDialog(
+                title,
+                message,
+                onConfirm: async () =>
+                {
+                    GameLogger.LogInfo(ScreenName, "Player confirmed game restart - resetting progress");
+                    await ResetProgressAndStartNewGame();
+                },
+                onCancel: () =>
+                {
+                    GameLogger.LogInfo(ScreenName, "Player cancelled game restart");
+                }
+            );
+        }
+        
+        /// <summary>
+        /// НОВОЕ: Сброс прогресса и начало новой игры
+        /// </summary>
+        private async UniTask ResetProgressAndStartNewGame()
+        {
+            try
+            {
+                // Сбрасываем прогресс
+                ProgressService.ResetProgress();
+                GameLogger.LogInfo(ScreenName, "Progress reset completed");
+                
+                // Обновляем UI
+                await RefreshProgressAndUpdateUI();
+                
+                // Показываем уведомление
+                UIService.ShowMessage("Прогресс сброшен! Начинаем заново.", 2f);
+                
+                // Небольшая задержка для показа сообщения
+                await UniTask.Delay(1000);
+                
+                // Запускаем первый уровень
+                StartLevel(1);
+            }
+            catch (System.Exception ex)
+            {
+                GameLogger.LogException(ScreenName, ex);
+                UIService.ShowMessage("Ошибка при сбросе прогресса. Попробуйте еще раз.", 3f);
+            }
+        }
+        
+        /// <summary>
+        /// НОВОЕ: Запуск конкретного уровня
+        /// </summary>
+        private void StartLevel(int levelId)
+        {
+            try
+            {
+                // Создаем параметры для передачи в игровую сцену
+                var gameplayParameters = new GameplayParameters
+                {
+                    LevelId = levelId
+                };
+                
+                GameLogger.LogInfo(ScreenName, $"Starting level {levelId}");
+                
+                // Загружаем игровую сцену с параметрами
+                LoadSceneWithParametersSafe(SceneNames.Gameplay, gameplayParameters);
+            }
+            catch (System.Exception ex)
+            {
+                GameLogger.LogException(ScreenName, ex);
+                UIService.ShowMessage("Ошибка запуска уровня. Попробуйте еще раз.", 3f);
             }
         }
         

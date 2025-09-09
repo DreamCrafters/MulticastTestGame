@@ -262,6 +262,35 @@ namespace WordPuzzle.Data.Persistence
         }
         
         /// <summary>
+        /// Проверка, завершены ли все доступные уровни
+        /// </summary>
+        /// <param name="totalLevels">Общее количество доступных уровней</param>
+        /// <returns>true если все уровни пройдены</returns>
+        public bool AreAllLevelsCompleted(int totalLevels)
+        {
+            if (!IsInitialized || _currentProgress == null)
+            {
+                return false;
+            }
+            
+            if (totalLevels <= 0)
+            {
+                return false;
+            }
+            
+            // Проверяем, что пройдены все уровни с 1 до totalLevels включительно
+            for (int levelId = 1; levelId <= totalLevels; levelId++)
+            {
+                if (!_currentProgress.IsLevelCompleted(levelId))
+                {
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+        
+        /// <summary>
         /// Асинхронное сохранение прогресса
         /// </summary>
         private async UniTask SaveProgressAsync()
