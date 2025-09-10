@@ -8,7 +8,7 @@ namespace WordPuzzle.UI.Components
 {
     /// <summary>
     /// Компонент диалога подтверждения
-    /// ПОЛНОСТЬЮ ИСПРАВЛЕНО: правильное создание UI объектов с RectTransform
+    /// ПОЛНОСТЬЮ ИСПРАВЛЕНО: правильное создание UI элементов без ошибок
     /// </summary>
     public class ConfirmDialog : MonoBehaviour
     {
@@ -39,56 +39,73 @@ namespace WordPuzzle.UI.Components
         }
 
         /// <summary>
-        /// ИСПРАВЛЕНО: Правильная настройка всех компонентов
+        /// ИСПРАВЛЕНО: Безопасная настройка всех компонентов
         /// </summary>
         private void SetupComponents()
         {
-            try 
+            try
             {
                 Debug.Log("[ConfirmDialog] Starting SetupComponents...");
-                
-                // ИСПРАВЛЕНИЕ: Сначала создаем/проверяем CanvasGroup ПЕРЕД его использованием
-                if (_canvasGroup == null)
+
+                // ШАГ 1: Убеждаемся что у объекта есть RectTransform
+                if (GetComponent<RectTransform>() == null)
                 {
-                    _canvasGroup = GetComponent<CanvasGroup>();
-                    if (_canvasGroup == null)
-                    {
-                        _canvasGroup = gameObject.AddComponent<CanvasGroup>();
-                        Debug.Log("[ConfirmDialog] CanvasGroup component added dynamically");
-                    }
+                    gameObject.AddComponent<RectTransform>();
                 }
 
+                // ШАГ 2: Создаем/проверяем CanvasGroup ПЕРВЫМ
+                SetupCanvasGroup();
+
+                // ШАГ 3: Создаем базовые элементы
                 CreateBasicElements();
+
+                // ШАГ 4: Создаем кнопки
                 SetupButtons();
 
-                // ИСПРАВЛЕНИЕ: Теперь безопасно устанавливаем параметры, так как CanvasGroup точно существует
+                // ШАГ 5: Устанавливаем начальное состояние
                 _canvasGroup.alpha = 0f;
                 transform.localScale = Vector3.zero;
                 gameObject.SetActive(false);
-                
-                Debug.Log("[ConfirmDialog] ConfirmDialog components setup completed successfully");
+
+                Debug.Log("[ConfirmDialog] ConfirmDialog setup completed successfully");
             }
             catch (System.Exception ex)
             {
                 Debug.LogError($"[ConfirmDialog] Error in SetupComponents: {ex.Message}");
                 Debug.LogException(ex);
-                
+
                 // Создаем минимальные fallback компоненты
                 CreateFallbackDialog();
             }
         }
 
         /// <summary>
-        /// ПОЛНОСТЬЮ ПЕРЕПИСАНО: Правильное создание UI объектов
+        /// НОВОЕ: Безопасная настройка CanvasGroup
+        /// </summary>
+        private void SetupCanvasGroup()
+        {
+            if (_canvasGroup == null)
+            {
+                _canvasGroup = GetComponent<CanvasGroup>();
+                if (_canvasGroup == null)
+                {
+                    _canvasGroup = gameObject.AddComponent<CanvasGroup>();
+                    Debug.Log("[ConfirmDialog] CanvasGroup component added");
+                }
+            }
+        }
+
+        /// <summary>
+        /// ИСПРАВЛЕНО: Безопасное создание базовых элементов
         /// </summary>
         private void CreateBasicElements()
         {
             Debug.Log("[ConfirmDialog] Creating basic elements...");
-            
-            // Background
+
+            // Background - используем существующий Image или создаем новый
             if (_backgroundImage == null)
             {
-                _backgroundImage = gameObject.GetComponent<Image>();
+                _backgroundImage = GetComponent<Image>();
                 if (_backgroundImage == null)
                 {
                     _backgroundImage = gameObject.AddComponent<Image>();
@@ -97,45 +114,46 @@ namespace WordPuzzle.UI.Components
 
                 // Настройка размера
                 var rect = GetComponent<RectTransform>();
-                if (rect != null)
-                {
-                    rect.sizeDelta = new Vector2(500, 300);
-                }
-                
+                rect.sizeDelta = new Vector2(500, 300);
+
                 Debug.Log("[ConfirmDialog] Background image created");
             }
 
-            // ИСПРАВЛЕНО: Правильное создание UI объектов с RectTransform
-            // Title
+            // Title Text
             if (_titleText == null)
             {
-                Debug.Log("[ConfirmDialog] Creating title text...");
-                _titleText = CreateUITextElement("Title", new Vector2(0f, 0.7f), new Vector2(1f, 0.9f), 28, FontStyles.Bold);
-                Debug.Log("[ConfirmDialog] Title text created successfully");
+                _titleText = CreateTextElement("Title", new Vector2(0f, 0.7f), new Vector2(1f, 0.9f), 28, FontStyles.Bold);
+                Debug.Log("[ConfirmDialog] Title text created");
             }
 
-            // Message  
+            // Message Text  
             if (_messageText == null)
             {
-                Debug.Log("[ConfirmDialog] Creating message text...");
-                _messageText = CreateUITextElement("Message", new Vector2(0f, 0.3f), new Vector2(1f, 0.7f), 20, FontStyles.Normal);
+                _messageText = CreateTextElement("Message", new Vector2(0f, 0.3f), new Vector2(1f, 0.7f), 20, FontStyles.Normal);
                 _messageText.textWrappingMode = TextWrappingModes.Normal;
-                Debug.Log("[ConfirmDialog] Message text created successfully");
+                Debug.Log("[ConfirmDialog] Message text created");
             }
-            
+
             Debug.Log("[ConfirmDialog] Basic elements creation completed");
         }
 
         /// <summary>
-        /// НОВОЕ: Метод для правильного создания UI текстовых элементов
+        /// НОВОЕ: Безопасное создание текстовых элементов
         /// </summary>
-        private TextMeshProUGUI CreateUITextElement(string name, Vector2 anchorMin, Vector2 anchorMax, float fontSize, FontStyles fontStyle)
+        private TextMeshProUGUI CreateTextElement(string name, Vector2 anchorMin, Vector2 anchorMax, float fontSize, FontStyles fontStyle)
         {
-            // Создаем GameObject с RectTransform для UI
-            var textObject = new GameObject(name, typeof(RectTransform));
+            // Создаем GameObject
+            var textObject = new GameObject(name);
             textObject.transform.SetParent(transform, false);
 
-            // Добавляем TextMeshProUGUI компонент
+            // Добавляем RectTransform
+            var rectTransform = textObject.AddComponent<RectTransform>();
+            rectTransform.anchorMin = anchorMin;
+            rectTransform.anchorMax = anchorMax;
+            rectTransform.offsetMin = new Vector2(20, 0);
+            rectTransform.offsetMax = new Vector2(-20, 0);
+
+            // Добавляем TextMeshProUGUI
             var textComponent = textObject.AddComponent<TextMeshProUGUI>();
             textComponent.text = name;
             textComponent.fontSize = fontSize;
@@ -143,29 +161,22 @@ namespace WordPuzzle.UI.Components
             textComponent.alignment = TextAlignmentOptions.Center;
             textComponent.fontStyle = fontStyle;
 
-            // Настраиваем RectTransform
-            var rectTransform = textObject.GetComponent<RectTransform>();
-            rectTransform.anchorMin = anchorMin;
-            rectTransform.anchorMax = anchorMax;
-            rectTransform.offsetMin = new Vector2(20, 0);
-            rectTransform.offsetMax = new Vector2(-20, 0);
-
             return textComponent;
         }
 
         /// <summary>
-        /// ИСПРАВЛЕНО: Правильное создание кнопок
+        /// ИСПРАВЛЕНО: Безопасное создание кнопок
         /// </summary>
         private void SetupButtons()
         {
             Debug.Log("[ConfirmDialog] Setting up buttons...");
-            
+
             try
             {
                 // Confirm Button
                 if (_confirmButton == null)
                 {
-                    _confirmButton = CreateUIButton("ConfirmButton", new Vector2(0.6f, 0.1f), new Vector2(0.9f, 0.25f), 
+                    _confirmButton = CreateButton("ConfirmButton", new Vector2(0.6f, 0.1f), new Vector2(0.9f, 0.25f),
                                                   new Color(0.2f, 0.7f, 0.3f, 1f), "OK");
                     Debug.Log("[ConfirmDialog] Confirm button created");
                 }
@@ -173,15 +184,15 @@ namespace WordPuzzle.UI.Components
                 // Cancel Button
                 if (_cancelButton == null)
                 {
-                    _cancelButton = CreateUIButton("CancelButton", new Vector2(0.1f, 0.1f), new Vector2(0.4f, 0.25f), 
+                    _cancelButton = CreateButton("CancelButton", new Vector2(0.1f, 0.1f), new Vector2(0.4f, 0.25f),
                                                  new Color(0.6f, 0.3f, 0.3f, 1f), "Cancel");
                     Debug.Log("[ConfirmDialog] Cancel button created");
                 }
 
-                // События кнопок
+                // Подписываемся на события
                 _confirmButton.onClick.AddListener(OnConfirmClicked);
                 _cancelButton.onClick.AddListener(OnCancelClicked);
-                
+
                 Debug.Log("[ConfirmDialog] Button setup completed");
             }
             catch (System.Exception ex)
@@ -192,120 +203,126 @@ namespace WordPuzzle.UI.Components
         }
 
         /// <summary>
-        /// НОВОЕ: Метод для правильного создания кнопок UI
+        /// НОВОЕ: Безопасное создание кнопок
         /// </summary>
-        private Button CreateUIButton(string name, Vector2 anchorMin, Vector2 anchorMax, Color color, string text)
+        private Button CreateButton(string name, Vector2 anchorMin, Vector2 anchorMax, Color color, string text)
         {
-            // Создаем GameObject для кнопки с RectTransform
-            var buttonObject = new GameObject(name, typeof(RectTransform));
+            // Создаем GameObject для кнопки
+            var buttonObject = new GameObject(name);
             buttonObject.transform.SetParent(transform, false);
 
-            // Добавляем компоненты кнопки
-            var button = buttonObject.AddComponent<Button>();
+            // Добавляем RectTransform
+            var rectTransform = buttonObject.AddComponent<RectTransform>();
+            rectTransform.anchorMin = anchorMin;
+            rectTransform.anchorMax = anchorMax;
+            rectTransform.offsetMin = Vector2.zero;
+            rectTransform.offsetMax = Vector2.zero;
+
+            // Добавляем Image и Button
             var image = buttonObject.AddComponent<Image>();
             image.color = color;
-
-            // Настраиваем RectTransform
-            var buttonRect = buttonObject.GetComponent<RectTransform>();
-            buttonRect.anchorMin = anchorMin;
-            buttonRect.anchorMax = anchorMax;
-            buttonRect.offsetMin = Vector2.zero;
-            buttonRect.offsetMax = Vector2.zero;
+            var button = buttonObject.AddComponent<Button>();
 
             // Создаем текст кнопки
-            var textObject = new GameObject("Text", typeof(RectTransform));
+            var textObject = new GameObject("Text");
             textObject.transform.SetParent(buttonObject.transform, false);
-            
+
+            var textRect = textObject.AddComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = Vector2.zero;
+            textRect.offsetMax = Vector2.zero;
+
             var buttonText = textObject.AddComponent<TextMeshProUGUI>();
             buttonText.text = text;
             buttonText.fontSize = 18;
             buttonText.color = Color.white;
             buttonText.alignment = TextAlignmentOptions.Center;
 
-            var textRect = textObject.GetComponent<RectTransform>();
-            textRect.anchorMin = Vector2.zero;
-            textRect.anchorMax = Vector2.one;
-            textRect.offsetMin = Vector2.zero;
-            textRect.offsetMax = Vector2.zero;
-
             return button;
         }
 
         /// <summary>
-        /// НОВОЕ: Создание простого fallback диалога в случае ошибки
+        /// НОВОЕ: Создание минимального диалога в случае критической ошибки
         /// </summary>
         private void CreateFallbackDialog()
         {
             Debug.Log("[ConfirmDialog] Creating fallback dialog...");
-            
-            // Простой фон
+
+            // Минимальный CanvasGroup
+            if (_canvasGroup == null)
+            {
+                _canvasGroup = gameObject.AddComponent<CanvasGroup>();
+            }
+
+            // Минимальный фон
             if (_backgroundImage == null)
             {
                 _backgroundImage = gameObject.AddComponent<Image>();
                 _backgroundImage.color = new Color(0.2f, 0.2f, 0.2f, 0.95f);
             }
-            
-            // Простые кнопки без текста - просто чтобы диалог работал
+
+            // Минимальные кнопки
             if (_confirmButton == null)
             {
-                var confirmObj = new GameObject("FallbackConfirm", typeof(RectTransform));
+                var confirmObj = new GameObject("FallbackConfirm");
                 confirmObj.transform.SetParent(transform, false);
+                confirmObj.AddComponent<RectTransform>();
                 _confirmButton = confirmObj.AddComponent<Button>();
+                confirmObj.AddComponent<Image>().color = Color.green;
                 _confirmButton.onClick.AddListener(() => { Hide(); _onConfirm?.Invoke(); });
             }
-            
+
             if (_cancelButton == null)
             {
-                var cancelObj = new GameObject("FallbackCancel", typeof(RectTransform));
+                var cancelObj = new GameObject("FallbackCancel");
                 cancelObj.transform.SetParent(transform, false);
+                cancelObj.AddComponent<RectTransform>();
                 _cancelButton = cancelObj.AddComponent<Button>();
+                cancelObj.AddComponent<Image>().color = Color.red;
                 _cancelButton.onClick.AddListener(() => { Hide(); _onCancel?.Invoke(); });
             }
+
+            Debug.Log("[ConfirmDialog] Fallback dialog created");
         }
 
         /// <summary>
-        /// ИСПРАВЛЕНО: Показать диалог с проверками на null
+        /// ИСПРАВЛЕНО: Показать диалог с полными проверками
         /// </summary>
         public void Show(string title, string message, Action confirmed = null, Action cancelled = null, Action onClose = null)
         {
             Debug.Log($"[ConfirmDialog] Show called with title: '{title}', message: '{message}'");
-            
+
             if (_canvasGroup == null)
             {
-                Debug.LogError("[ConfirmDialog] Cannot show dialog - CanvasGroup is null!");
+                Debug.LogError("[ConfirmDialog] Critical error - CanvasGroup is null even after setup!");
+                confirmed?.Invoke(); // Вызываем подтверждение по умолчанию
                 return;
             }
-            
+
             _onConfirm = confirmed;
             _onCancel = cancelled;
             _onClose = onClose;
 
-            // ИСПРАВЛЕНО: Безопасная установка текста с проверкой на null
+            // Безопасная установка текста
             if (_titleText != null)
             {
                 _titleText.text = title ?? "Confirm";
-            }
-            else
-            {
-                Debug.LogWarning("[ConfirmDialog] Title text is null, cannot set title");
             }
 
             if (_messageText != null)
             {
                 _messageText.text = message ?? "";
             }
-            else
-            {
-                Debug.LogWarning("[ConfirmDialog] Message text is null, cannot set message");
-            }
 
             gameObject.SetActive(true);
 
+            // Анимация появления
             var sequence = DOTween.Sequence();
             sequence.Append(_canvasGroup.DOFade(1f, _showDuration).SetEase(_showEase));
             sequence.Join(transform.DOScale(Vector3.one, _showDuration).SetEase(_showEase));
-            
-            Debug.Log($"[ConfirmDialog] Dialog shown: {title} - {message}");
+
+            Debug.Log($"[ConfirmDialog] Dialog shown successfully");
         }
 
         /// <summary>
@@ -315,11 +332,13 @@ namespace WordPuzzle.UI.Components
         {
             if (_canvasGroup == null)
             {
-                Debug.LogError("[ConfirmDialog] Cannot hide dialog - CanvasGroup is null!");
+                Debug.LogError("[ConfirmDialog] Cannot hide - CanvasGroup is null!");
+                gameObject.SetActive(false);
                 _onClose?.Invoke();
+                Destroy(gameObject);
                 return;
             }
-            
+
             var sequence = DOTween.Sequence();
             sequence.Append(_canvasGroup.DOFade(0f, _hideDuration).SetEase(_hideEase));
             sequence.Join(transform.DOScale(Vector3.zero, _hideDuration).SetEase(_hideEase));
@@ -329,7 +348,7 @@ namespace WordPuzzle.UI.Components
                 _onClose?.Invoke();
                 Destroy(gameObject);
             });
-            
+
             Debug.Log("[ConfirmDialog] Dialog hidden");
         }
 
@@ -365,18 +384,6 @@ namespace WordPuzzle.UI.Components
 
             if (_cancelButton != null)
                 _cancelButton.onClick.RemoveListener(OnCancelClicked);
-        }
-        
-        /// <summary>
-        /// Валидация компонента в редакторе
-        /// </summary>
-        private void OnValidate()
-        {
-            // Автоматически находим CanvasGroup если он не назначен
-            if (_canvasGroup == null && gameObject != null)
-            {
-                _canvasGroup = GetComponent<CanvasGroup>();
-            }
         }
     }
 }
