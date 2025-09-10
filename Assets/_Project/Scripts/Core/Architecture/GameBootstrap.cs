@@ -19,10 +19,10 @@ namespace WordPuzzle.Core.Architecture
         private readonly ISceneService _sceneService;
         private readonly IUIService _uiService;
         private readonly UINavigationService _navigationService;
-        
+
         private readonly List<IGameService> _allServices;
         private bool _isInitialized = false;
-        
+
         /// <summary>
         /// Конструктор с инжекцией зависимостей
         /// VContainer автоматически передает зарегистрированные сервисы
@@ -39,7 +39,7 @@ namespace WordPuzzle.Core.Architecture
             _sceneService = sceneService;
             _uiService = uiService;
             _navigationService = navigationService;
-            
+
             // Сохраняем ссылки на все сервисы для групповых операций
             _allServices = new List<IGameService>
             {
@@ -49,10 +49,10 @@ namespace WordPuzzle.Core.Architecture
                 _uiService,
                 _navigationService
             };
-            
+
             GameLogger.LogInfo("GameBootstrap", "GameBootstrap constructor completed");
         }
-        
+
         /// <summary>
         /// Запуск инициализации приложения
         /// Вызывается VContainer автоматически
@@ -60,16 +60,16 @@ namespace WordPuzzle.Core.Architecture
         public async void Start()
         {
             GameLogger.LogInfo("GameBootstrap", "=== GAME INITIALIZATION STARTED ===");
-            
+
             try
             {
                 await InitializeAllServicesAsync();
-                
+
                 // Инициализируем ServiceLocator для fallback доступа к сервисам
                 ServiceLocator.Initialize(_uiService, _progressService, _levelService, _sceneService);
-                
+
                 await LoadInitialSceneAsync();
-                
+
                 _isInitialized = true;
                 GameLogger.LogInfo("GameBootstrap", "=== GAME INITIALIZATION COMPLETED SUCCESSFULLY ===");
             }
@@ -77,28 +77,28 @@ namespace WordPuzzle.Core.Architecture
             {
                 GameLogger.LogException("GameBootstrap", exception);
                 GameLogger.LogError("GameBootstrap", "=== GAME INITIALIZATION FAILED ===");
-                
+
                 // В продакшене здесь можно показать экран ошибки
                 HandleInitializationError(exception);
             }
         }
-        
+
         /// <summary>
         /// Последовательная инициализация всех сервисов
         /// </summary>
         private async UniTask InitializeAllServicesAsync()
         {
             GameLogger.LogInfo("GameBootstrap", $"Initializing {_allServices.Count} services...");
-            
+
             foreach (var service in _allServices)
             {
                 string serviceName = service.GetType().Name;
-                
+
                 try
                 {
                     GameLogger.LogInfo("GameBootstrap", $"Initializing {serviceName}...");
                     await service.InitializeAsync();
-                    
+
                     if (service.IsInitialized)
                     {
                         GameLogger.LogServiceInitialization(serviceName, true);
@@ -116,20 +116,20 @@ namespace WordPuzzle.Core.Architecture
                 }
             }
         }
-        
+
         /// <summary>
         /// Загрузка начальной сцены после инициализации
         /// </summary>
         private async UniTask LoadInitialSceneAsync()
         {
             GameLogger.LogInfo("GameBootstrap", "Loading initial scene...");
-            
+
             // Загружаем главное меню как стартовую сцену
             await _sceneService.LoadSceneAsync(SceneNames.MainMenu, showLoadingScreen: false);
-            
+
             GameLogger.LogInfo("GameBootstrap", "Initial scene loaded successfully");
         }
-        
+
         /// <summary>
         /// Обработка ошибки инициализации
         /// </summary>
@@ -140,19 +140,19 @@ namespace WordPuzzle.Core.Architecture
             // - Показ экрана ошибки
             // - Отправка ошибки в аналитику
             // - Попытка восстановления
-            
+
             GameLogger.LogError("GameBootstrap", "Application will not function properly due to initialization failure");
         }
-        
+
         /// <summary>
         /// Корректное завершение работы сервисов
         /// </summary>
         public void Dispose()
         {
             if (_isInitialized == false) return;
-            
+
             GameLogger.LogInfo("GameBootstrap", "=== DISPOSING GAME SERVICES ===");
-            
+
             // Освобождаем ресурсы всех сервисов в обратном порядке
             for (int i = _allServices.Count - 1; i >= 0; i--)
             {
@@ -160,7 +160,7 @@ namespace WordPuzzle.Core.Architecture
                 {
                     var service = _allServices[i];
                     string serviceName = service.GetType().Name;
-                    
+
                     GameLogger.LogInfo("GameBootstrap", $"Disposing {serviceName}...");
                     service.Dispose();
                 }
@@ -169,13 +169,13 @@ namespace WordPuzzle.Core.Architecture
                     GameLogger.LogException("GameBootstrap", ex);
                 }
             }
-            
+
             _allServices.Clear();
             _isInitialized = false;
-            
+
             // Очищаем ServiceLocator
             ServiceLocator.Clear();
-            
+
             GameLogger.LogInfo("GameBootstrap", "=== GAME SERVICES DISPOSED ===");
         }
     }

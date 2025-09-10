@@ -8,7 +8,9 @@ namespace WordPuzzle.UI.Components
 {
     /// <summary>
     /// Компонент всплывающего сообщения
-    /// ИСПРАВЛЕНО: правильный порядок инициализации CanvasGroup
+    /// ИСПРАВЛЕНО: мобильно-безопасное позиционирование с учетом Safe Area
+    /// Позиционируется в правом верхнем углу с настраиваемыми отступами
+    /// Автоматически учитывает notch и другие системные элементы мобильных устройств
     /// </summary>
     public class MessagePopup : MonoBehaviour
     {
@@ -22,6 +24,11 @@ namespace WordPuzzle.UI.Components
         [SerializeField] private float _hideDuration = 0.3f;
         [SerializeField] private Ease _showEase = Ease.OutBack;
         [SerializeField] private Ease _hideEase = Ease.InQuad;
+        
+        [Header("Positioning Settings")]
+        [SerializeField] private float _rightMargin = 120f;  // Отступ справа
+        [SerializeField] private float _topMargin = 80f;     // Отступ сверху
+        [SerializeField] private Vector2 _messageSize = new Vector2(400f, 80f); // Размер сообщения
 
         private Action _onHideComplete;
 
@@ -30,7 +37,67 @@ namespace WordPuzzle.UI.Components
         /// </summary>
         private void Awake()
         {
+            SetupMobileSafePositioning();
             SetupComponents();
+        }
+        
+        /// <summary>
+        /// Настройка мобильно-безопасного позиционирования с учетом Safe Area
+        /// </summary>
+        private void SetupMobileSafePositioning()
+        {
+            var rectTransform = GetComponent<RectTransform>();
+            if (rectTransform == null)
+            {
+                rectTransform = gameObject.AddComponent<RectTransform>();
+            }
+            
+            // Получаем Safe Area для мобильных устройств
+            var safeArea = Screen.safeArea;
+            var screenWidth = Screen.width;
+            var screenHeight = Screen.height;
+            
+            // Дополнительные отступы для устройств с notch/safe area
+            float additionalTopMargin = 0f;
+            float additionalRightMargin = 0f;
+            
+            // Если Safe Area отличается от полного экрана, добавляем дополнительные отступы
+            if (safeArea.y > 0) // Есть отступ сверху (notch или status bar)
+            {
+                additionalTopMargin = safeArea.y * 0.5f; // Дополнительный отступ
+            }
+            
+            if (safeArea.x + safeArea.width < screenWidth) // Есть отступ справа
+            {
+                additionalRightMargin = (screenWidth - safeArea.x - safeArea.width) * 0.5f;
+            }
+            
+            // Позиционирование в правом верхнем углу с безопасными отступами
+            rectTransform.anchorMin = new Vector2(1, 1);
+            rectTransform.anchorMax = new Vector2(1, 1);
+            rectTransform.sizeDelta = _messageSize;
+            
+            var finalRightMargin = _rightMargin + additionalRightMargin;
+            var finalTopMargin = _topMargin + additionalTopMargin;
+            
+            rectTransform.anchoredPosition = new Vector2(-finalRightMargin, -finalTopMargin);
+            
+            Debug.Log($"[MessagePopup] Mobile-safe positioning applied: " +
+                     $"rightMargin={finalRightMargin} ({_rightMargin}+{additionalRightMargin}), " +
+                     $"topMargin={finalTopMargin} ({_topMargin}+{additionalTopMargin}), " +
+                     $"safeArea={safeArea}, screen={screenWidth}x{screenHeight}");
+        }
+        
+        /// <summary>
+        /// Настройка позиционирования с кастомными параметрами
+        /// </summary>
+        public void SetCustomPositioning(float rightMargin, float topMargin, Vector2 size)
+        {
+            _rightMargin = rightMargin;
+            _topMargin = topMargin;
+            _messageSize = size;
+            
+            SetupMobileSafePositioning();
         }
 
         /// <summary>

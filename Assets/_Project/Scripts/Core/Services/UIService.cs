@@ -478,18 +478,20 @@ namespace WordPuzzle.Core.Services
         
         /// <summary>
         /// Создание простого сообщения (если нет префаба)
+        /// ИСПРАВЛЕНО: мобильно-безопасное позиционирование через MessagePopup
         /// </summary>
         private GameObject CreateSimpleMessage()
         {
             var messageObject = new GameObject("Message");
             messageObject.transform.SetParent(_popupContainer, false);
             
-            // Устанавливаем позицию в правом верхнем углу
+            // Позиционирование теперь настраивается в MessagePopup.SetupMobileSafePositioning()
+            // Базовая настройка для совместимости
             var rectTransform = messageObject.AddComponent<RectTransform>();
             rectTransform.anchorMin = new Vector2(1, 1);
             rectTransform.anchorMax = new Vector2(1, 1);
             rectTransform.sizeDelta = new Vector2(400, 80);
-            rectTransform.anchoredPosition = new Vector2(-20, -20);
+            rectTransform.anchoredPosition = new Vector2(-120, -80);
             
             return messageObject;
         }
