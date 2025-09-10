@@ -500,12 +500,6 @@ namespace WordPuzzle.UI.Screens
             GameLogger.LogInfo(ScreenName, $"LevelService is null: {LevelService == null}");
             GameLogger.LogInfo(ScreenName, $"SceneService is null: {SceneService == null}");
         }
-        
-        [ContextMenu("Show ServiceLocator Info")]
-        private void ShowServiceLocatorInfo()
-        {
-            GameLogger.LogInfo(ScreenName, WordPuzzle.Core.Utils.ServiceLocator.GetServicesInfo());
-        }
         #endif
         
         /// <summary>

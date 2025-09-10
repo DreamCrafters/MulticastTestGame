@@ -2,7 +2,6 @@ using UnityEngine;
 using VContainer;
 using WordPuzzle.Core.Architecture;
 using WordPuzzle.Core.Services;
-using WordPuzzle.Core.Utils;
 
 namespace WordPuzzle.UI.Screens
 {
@@ -28,14 +27,6 @@ namespace WordPuzzle.UI.Screens
             // Сначала пробуем инжектированный сервис
             if (UIService != null) return UIService;
             
-            // Затем пробуем ServiceLocator
-            var serviceLocatorUI = ServiceLocator.GetUIService();
-            if (serviceLocatorUI != null) 
-            {
-                GameLogger.LogWarning(ScreenName, "Using UIService from ServiceLocator");
-                return serviceLocatorUI;
-            }
-            
             GameLogger.LogError(ScreenName, "UIService not available through DI or ServiceLocator");
             return null;
         }
@@ -44,14 +35,6 @@ namespace WordPuzzle.UI.Screens
         {
             // Сначала пробуем инжектированный сервис
             if (ProgressService != null) return ProgressService;
-            
-            // Затем пробуем ServiceLocator
-            var serviceLocatorProgress = ServiceLocator.GetProgressService();
-            if (serviceLocatorProgress != null)
-            {
-                GameLogger.LogWarning(ScreenName, "Using ProgressService from ServiceLocator");
-                return serviceLocatorProgress;
-            }
             
             GameLogger.LogError(ScreenName, "ProgressService not available through DI or ServiceLocator");
             return null;
@@ -62,14 +45,6 @@ namespace WordPuzzle.UI.Screens
             // Сначала пробуем инжектированный сервис
             if (LevelService != null) return LevelService;
             
-            // Затем пробуем ServiceLocator
-            var serviceLocatorLevel = ServiceLocator.GetLevelService();
-            if (serviceLocatorLevel != null)
-            {
-                GameLogger.LogWarning(ScreenName, "Using LevelService from ServiceLocator");
-                return serviceLocatorLevel;
-            }
-            
             GameLogger.LogError(ScreenName, "LevelService not available through DI or ServiceLocator");
             return null;
         }
@@ -78,14 +53,6 @@ namespace WordPuzzle.UI.Screens
         {
             // Сначала пробуем инжектированный сервис
             if (SceneService != null) return SceneService;
-            
-            // Затем пробуем ServiceLocator
-            var serviceLocatorScene = ServiceLocator.GetSceneService();
-            if (serviceLocatorScene != null)
-            {
-                GameLogger.LogWarning(ScreenName, "Using SceneService from ServiceLocator");
-                return serviceLocatorScene;
-            }
             
             GameLogger.LogError(ScreenName, "SceneService not available through DI or ServiceLocator");
             return null;

@@ -4,7 +4,6 @@ using Cysharp.Threading.Tasks;
 using VContainer.Unity;
 using WordPuzzle.Core.Services;
 using WordPuzzle.UI.Navigation;
-using WordPuzzle.Core.Utils;
 
 namespace WordPuzzle.Core.Architecture
 {
@@ -64,10 +63,6 @@ namespace WordPuzzle.Core.Architecture
             try
             {
                 await InitializeAllServicesAsync();
-
-                // Инициализируем ServiceLocator для fallback доступа к сервисам
-                ServiceLocator.Initialize(_uiService, _progressService, _levelService, _sceneService);
-
                 await LoadInitialSceneAsync();
 
                 _isInitialized = true;
@@ -172,9 +167,6 @@ namespace WordPuzzle.Core.Architecture
 
             _allServices.Clear();
             _isInitialized = false;
-
-            // Очищаем ServiceLocator
-            ServiceLocator.Clear();
 
             GameLogger.LogInfo("GameBootstrap", "=== GAME SERVICES DISPOSED ===");
         }
