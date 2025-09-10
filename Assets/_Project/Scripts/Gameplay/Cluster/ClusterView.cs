@@ -41,7 +41,6 @@ namespace WordPuzzle.Gameplay.Cluster
         [SerializeField] private Vector2 _minSize = new Vector2(60, 50);
         [SerializeField] private Vector2 _padding = new Vector2(20, 10);
         [SerializeField] private float _borderWidth = 2f;
-        [SerializeField] private int _fontSize = 20;
         
         private RectTransform _rectTransform;
         private ClusterData _clusterData;
@@ -143,7 +142,6 @@ namespace WordPuzzle.Gameplay.Cluster
                 textObject.transform.SetParent(transform, false);
                 
                 _clusterText = textObject.AddComponent<TextMeshProUGUI>();
-                _clusterText.fontSize = _fontSize;
                 _clusterText.color = _normalTextColor;
                 _clusterText.alignment = TextAlignmentOptions.Center;
                 _clusterText.fontStyle = FontStyles.Bold;
@@ -414,7 +412,6 @@ namespace WordPuzzle.Gameplay.Cluster
             if (_padding.x < 0) _padding.x = 0;
             if (_padding.y < 0) _padding.y = 0;
             if (_borderWidth <= 0) _borderWidth = 2;
-            if (_fontSize <= 0) _fontSize = 20;
             if (_hoverScale <= 0) _hoverScale = 1.05f;
             if (_selectScale <= 0) _selectScale = 0.95f;
             if (_animationDuration <= 0) _animationDuration = 0.2f;

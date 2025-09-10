@@ -34,9 +34,7 @@ namespace WordPuzzle.Gameplay.Word
         [SerializeField] private Ease _letterDisappearEase = Ease.InQuad;
         
         [Header("Cell Settings")]
-        [SerializeField] private Vector2 _cellSize = new Vector2(60, 60);
         [SerializeField] private float _borderWidth = 2f;
-        [SerializeField] private int _letterFontSize = 24;
         
         private RectTransform _rectTransform;
         private string _currentLetter = "";
@@ -88,9 +86,6 @@ namespace WordPuzzle.Gameplay.Word
             if (_isInitialized) return;
             
             _rectTransform = GetComponent<RectTransform>();
-            
-            // Устанавливаем размер ячейки
-            _rectTransform.sizeDelta = _cellSize;
             
             // Создаем компоненты если не назначены
             CreateComponents();
@@ -150,7 +145,6 @@ namespace WordPuzzle.Gameplay.Word
                 textObject.transform.SetParent(transform, false);
                 
                 _letterText = textObject.AddComponent<TextMeshProUGUI>();
-                _letterText.fontSize = _letterFontSize;
                 _letterText.color = _letterColor;
                 _letterText.alignment = TextAlignmentOptions.Center;
                 _letterText.fontStyle = FontStyles.Bold;
@@ -342,18 +336,6 @@ namespace WordPuzzle.Gameplay.Word
         }
         
         /// <summary>
-        /// Установка размера ячейки
-        /// </summary>
-        public void SetCellSize(Vector2 size)
-        {
-            _cellSize = size;
-            if (_rectTransform != null)
-            {
-                _rectTransform.sizeDelta = _cellSize;
-            }
-        }
-        
-        /// <summary>
         /// Установка цвета буквы
         /// </summary>
         public void SetLetterColor(Color color)
@@ -381,16 +363,7 @@ namespace WordPuzzle.Gameplay.Word
         /// </summary>
         private void OnValidate()
         {
-            if (_cellSize.x <= 0) _cellSize.x = 60;
-            if (_cellSize.y <= 0) _cellSize.y = 60;
             if (_borderWidth <= 0) _borderWidth = 2;
-            if (_letterFontSize <= 0) _letterFontSize = 24;
-            
-            // Обновляем размер если компонент активен
-            if (_rectTransform != null)
-            {
-                _rectTransform.sizeDelta = _cellSize;
-            }
         }
         
         /// <summary>
