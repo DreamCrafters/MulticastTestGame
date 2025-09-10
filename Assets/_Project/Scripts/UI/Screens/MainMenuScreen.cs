@@ -2,65 +2,116 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using Cysharp.Threading.Tasks;
+using DG.Tweening;
 using WordPuzzle.Core.Architecture;
 using WordPuzzle.Core.Services;
+using WordPuzzle.UI.Components;
+using System.Threading.Tasks;
 
 namespace WordPuzzle.UI.Screens
 {
     /// <summary>
-    /// Экран главного меню игры
-    /// ИСПРАВЛЕНО: добавлено обновление UI при активации экрана
+    /// Экран главного меню игры (ОБНОВЛЕН для Этапа 5)
+    /// Использует компоненты LevelCounter и PlayButton для модульности
     /// </summary>
     public class MainMenuScreen : BaseScreen
     {
-        [Header("UI Elements")]
-        [SerializeField] private Button _playButton;
-        [SerializeField] private TextMeshProUGUI _levelCounterText;
+        [Header("UI Components")]
+        [SerializeField] private LevelCounter _levelCounter;
+        [SerializeField] private PlayButton _playButton;
         [SerializeField] private TextMeshProUGUI _titleText;
         
+        [Header("Additional UI")]
+        [SerializeField] private Button _resetProgressButton; // Для отладки
+        [SerializeField] private RectTransform _mainPanel;
+        
         [Header("Settings")]
-        [SerializeField] private string _titleTextContent = "Word Puzzle";
-        [SerializeField] private string _levelCounterFormat = "Levels Completed: {0}";
+        [SerializeField] private string _titleTextContent = "Word Puzzle Game";
+        [SerializeField] private bool _showDebugResetButton = true;
+        
+        [Header("Animations")]
+        [SerializeField] private bool _enableEntranceAnimation = true;
+        [SerializeField] private float _entranceAnimationDuration = 0.8f;
+        [SerializeField] private Ease _entranceEase = Ease.OutBack;
+        [SerializeField] private float _titleAnimationDelay = 0.2f;
+        [SerializeField] private float _componentsAnimationDelay = 0.4f;
         
         protected override string ScreenName => "MainMenu";
         
+        /// <summary>
+        /// Инициализация главного меню
+        /// </summary>
         protected override void OnInitialize()
         {
-            GameLogger.LogInfo(ScreenName, "Setting up Main Menu UI elements...");
+            GameLogger.LogInfo(ScreenName, "Setting up Main Menu with modular components...");
             
             SetupTitle();
-            UpdateLevelCounter();
-            SetupPlayButton();
+            SetupComponents();
+            SetupDebugButton();
             
-            GameLogger.LogInfo(ScreenName, "Main Menu UI setup completed");
+            if (_enableEntranceAnimation)
+            {
+                PlayEntranceAnimation();
+            }
+            
+            GameLogger.LogInfo(ScreenName, "Main Menu setup completed");
         }
         
+        /// <summary>
+        /// Подписка на события UI
+        /// </summary>
         protected override void SubscribeToUIEvents()
         {
+            // Подписываемся на событие Play button
             if (_playButton != null)
             {
-                _playButton.onClick.AddListener(OnPlayButtonClicked);
+                _playButton.OnPlayButtonClicked += OnPlayButtonClicked;
+                _playButton.OnStateChanged += OnPlayButtonStateChanged;
             }
             else
             {
-                GameLogger.LogWarning(ScreenName, "Play button is not assigned!");
+                GameLogger.LogWarning(ScreenName, "PlayButton component is not assigned!");
+            }
+            
+            // Подписываемся на кнопку сброса прогресса если она есть
+            if (_resetProgressButton != null)
+            {
+                _resetProgressButton.onClick.AddListener(OnResetProgressClicked);
             }
         }
         
+        /// <summary>
+        /// Отписка от событий UI
+        /// </summary>
         protected override void UnsubscribeFromUIEvents()
         {
             if (_playButton != null)
             {
-                _playButton.onClick.RemoveListener(OnPlayButtonClicked);
+                _playButton.OnPlayButtonClicked -= OnPlayButtonClicked;
+                _playButton.OnStateChanged -= OnPlayButtonStateChanged;
+            }
+            
+            if (_resetProgressButton != null)
+            {
+                _resetProgressButton.onClick.RemoveListener(OnResetProgressClicked);
             }
         }
         
+        /// <summary>
+        /// Настройка заголовка
+        /// </summary>
         private void SetupTitle()
         {
             if (_titleText != null)
             {
                 _titleText.text = _titleTextContent;
                 GameLogger.LogInfo(ScreenName, $"Title set to: {_titleTextContent}");
+                
+                if (_enableEntranceAnimation)
+                {
+                    // Подготовка к анимации - делаем невидимым
+                    _titleText.alpha = 0f;
+                }
             }
             else
             {
@@ -69,332 +120,332 @@ namespace WordPuzzle.UI.Screens
         }
         
         /// <summary>
-        /// ИСПРАВЛЕНО: Обновление счетчика с учетом завершения всех уровней
+        /// Настройка компонентов
         /// </summary>
-        private void UpdateLevelCounter()
+        private void SetupComponents()
         {
-            if (_levelCounterText == null)
+            // Проверяем наличие компонентов
+            if (_levelCounter == null)
             {
-                GameLogger.LogWarning(ScreenName, "Level counter text component is not assigned!");
-                return;
+                GameLogger.LogWarning(ScreenName, "LevelCounter component is not assigned! Looking in children...");
+                _levelCounter = GetComponentInChildren<LevelCounter>();
             }
             
-            try
-            {
-                // Проверяем доступность и инициализацию сервисов
-                if (ProgressService?.IsInitialized == true && LevelService?.IsInitialized == true)
-                {
-                    int completedLevels = ProgressService.GetCompletedLevelsCount();
-                    int totalLevels = LevelService.GetTotalLevelsCount();
-                    int currentLevel = ProgressService.GetCurrentLevelNumber();
-                    
-                    string counterText;
-                    
-                    // Проверяем, завершены ли все уровни
-                    if (ProgressService.AreAllLevelsCompleted(totalLevels) && totalLevels > 0)
-                    {
-                        counterText = $"Игра завершена! ({completedLevels}/{totalLevels})";
-                    }
-                    else if (totalLevels > 0)
-                    {
-                        counterText = $"Пройдено уровней: {completedLevels}/{totalLevels}";
-                    }
-                    else
-                    {
-                        counterText = string.Format(_levelCounterFormat, completedLevels);
-                    }
-                    
-                    _levelCounterText.text = counterText;
-                    
-                    GameLogger.LogInfo(ScreenName, $"Level counter updated: {completedLevels} completed of {totalLevels}, current: {currentLevel}");
-                }
-                else
-                {
-                    _levelCounterText.text = "Levels Completed: --";
-                    GameLogger.LogWarning(ScreenName, "Services not available or not initialized");
-                }
-            }
-            catch (System.Exception ex)
-            {
-                GameLogger.LogException(ScreenName, ex);
-                _levelCounterText.text = "Levels Completed: Error";
-            }
-        }
-        
-        /// <summary>
-        /// ИСПРАВЛЕНО: Улучшенная настройка кнопки Play с учетом завершения всех уровней
-        /// </summary>
-        private void SetupPlayButton()
-        {
             if (_playButton == null)
             {
-                GameLogger.LogWarning(ScreenName, "Play button is not assigned!");
-                return;
+                GameLogger.LogWarning(ScreenName, "PlayButton component is not assigned! Looking in children...");
+                _playButton = GetComponentInChildren<PlayButton>();
             }
             
-            try
+            // Подготовка к анимации
+            if (_enableEntranceAnimation)
             {
-                // Проверяем доступность сервисов
-                bool servicesReady = LevelService?.IsInitialized == true && ProgressService?.IsInitialized == true;
-                
-                if (!servicesReady)
-                {
-                    _playButton.interactable = false;
-                    UpdatePlayButtonText("Loading...");
-                    GameLogger.LogWarning(ScreenName, "Services not ready - disabling Play button");
-                    return;
-                }
-                
-                // Проверяем доступность уровней
-                int totalLevels = LevelService.GetTotalLevelsCount();
-                bool hasLevels = totalLevels > 0;
-                
-                if (!hasLevels)
-                {
-                    _playButton.interactable = false;
-                    UpdatePlayButtonText("No Levels");
-                    GameLogger.LogWarning(ScreenName, "No levels available - Play button disabled");
-                    return;
-                }
-                
-                _playButton.interactable = true;
-                
-                // Проверяем, завершены ли все уровни
-                if (ProgressService.AreAllLevelsCompleted(totalLevels))
-                {
-                    UpdatePlayButtonText("Play Again");
-                    GameLogger.LogInfo(ScreenName, $"All {totalLevels} levels completed - showing restart option");
-                }
-                else
-                {
-                    int currentLevel = ProgressService.GetCurrentLevelNumber();
-                    UpdatePlayButtonText("Play");
-                    GameLogger.LogInfo(ScreenName, $"Play button ready. Current level: {currentLevel} of {totalLevels}");
-                }
+                PrepareComponentsForAnimation();
             }
-            catch (System.Exception ex)
-            {
-                GameLogger.LogException(ScreenName, ex);
-                _playButton.interactable = false;
-                UpdatePlayButtonText("Error");
-            }
+            
+            GameLogger.LogInfo(ScreenName, $"Components setup: LevelCounter={_levelCounter != null}, PlayButton={_playButton != null}");
         }
         
         /// <summary>
-        /// НОВОЕ: Обновление текста кнопки Play
+        /// Настройка кнопки сброса прогресса для отладки
         /// </summary>
-        private void UpdatePlayButtonText(string text)
+        private void SetupDebugButton()
         {
-            if (_playButton != null)
+            if (_resetProgressButton != null)
             {
-                var buttonText = _playButton.GetComponentInChildren<TextMeshProUGUI>();
-                if (buttonText != null)
+                bool shouldShow = _showDebugResetButton;
+                
+                #if !UNITY_EDITOR && !DEVELOPMENT_BUILD
+                shouldShow = false; // Скрываем в релизной сборке
+                #endif
+                
+                _resetProgressButton.gameObject.SetActive(shouldShow);
+                
+                if (shouldShow)
                 {
-                    buttonText.text = text;
-                }
-            }
-        }
-        
-        /// <summary>
-        /// ИСПРАВЛЕНО: Улучшенная логика определения текущего уровня
-        /// </summary>
-        private void OnPlayButtonClicked()
-        {
-            GameLogger.LogInfo(ScreenName, "Play button clicked");
-            
-            try
-            {
-                // Получаем номер текущего уровня
-                int currentLevel = ProgressService.GetCurrentLevelNumber();
-                int totalLevels = LevelService.GetTotalLevelsCount();
-                
-                GameLogger.LogInfo(ScreenName, $"Current level from ProgressService: {currentLevel}");
-                GameLogger.LogInfo(ScreenName, $"Total levels available: {totalLevels}");
-                
-                // Проверяем, завершены ли все уровни
-                if (ProgressService.AreAllLevelsCompleted(totalLevels))
-                {
-                    GameLogger.LogInfo(ScreenName, "All levels completed - showing restart confirmation");
-                    ShowGameCompletionDialog(totalLevels);
-                    return;
-                }
-                
-                // Проверяем существование уровня
-                if (!LevelService.IsLevelExists(currentLevel))
-                {
-                    GameLogger.LogError(ScreenName, $"Level {currentLevel} does not exist!");
-                    UIService.ShowMessage("Level not found. Please check game configuration.", 3f);
-                    return;
-                }
-                
-                GameLogger.LogInfo(ScreenName, $"Starting level {currentLevel}");
-                
-                // Запускаем найденный уровень
-                StartLevel(currentLevel);
-            }
-            catch (System.Exception ex)
-            {
-                GameLogger.LogException(ScreenName, ex);
-                UIService.ShowMessage("Failed to start game. Please try again.", 3f);
-            }
-        }
-
-        /// <summary>
-        /// НОВОЕ: Обработка кнопки сброса прогресса для тестирования
-        /// </summary>
-        private void OnResetProgressClicked()
-        {
-            GameLogger.LogInfo(ScreenName, "Reset progress button clicked");
-            
-            UIService.ShowConfirmDialog(
-                "Reset Progress",
-                "Are you sure you want to reset all progress? This cannot be undone.",
-                onConfirm: () =>
-                {
-                    try
+                    var buttonText = _resetProgressButton.GetComponentInChildren<TextMeshProUGUI>();
+                    if (buttonText != null)
                     {
-                        ProgressService.ResetProgress();
-                        UpdateLevelCounter();
-                        SetupPlayButton();
-                        UIService.ShowMessage("Progress reset successfully!", 2f);
-                        GameLogger.LogInfo(ScreenName, "Progress reset completed");
+                        buttonText.text = "Reset Progress (Debug)";
                     }
-                    catch (System.Exception ex)
-                    {
-                        GameLogger.LogException(ScreenName, ex);
-                        UIService.ShowMessage("Failed to reset progress", 3f);
-                    }
-                },
-                onCancel: () =>
-                {
-                    GameLogger.LogInfo(ScreenName, "Progress reset cancelled");
                 }
-            );
+                
+                GameLogger.LogInfo(ScreenName, $"Debug reset button: {(shouldShow ? "shown" : "hidden")}");
+            }
         }
         
         /// <summary>
-        /// ИСПРАВЛЕНО: Обновление UI при возврате в главное меню
+        /// Подготовка компонентов к анимации входа
+        /// </summary>
+        private void PrepareComponentsForAnimation()
+        {
+            if (_mainPanel != null)
+            {
+                _mainPanel.localScale = Vector3.zero;
+            }
+            else
+            {
+                // Подготавливаем отдельные компоненты
+                if (_levelCounter != null)
+                {
+                    var counterRect = _levelCounter.GetComponent<RectTransform>();
+                    if (counterRect != null) counterRect.localScale = Vector3.zero;
+                }
+                
+                if (_playButton != null)
+                {
+                    var buttonRect = _playButton.GetComponent<RectTransform>();
+                    if (buttonRect != null) buttonRect.localScale = Vector3.zero;
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Анимация входа в главное меню
+        /// </summary>
+        private async void PlayEntranceAnimation()
+        {
+            GameLogger.LogInfo(ScreenName, "Playing entrance animation...");
+            
+            var sequence = DOTween.Sequence();
+            
+            // Анимация заголовка
+            if (_titleText != null)
+            {
+                sequence.Insert(_titleAnimationDelay, 
+                    _titleText.DOFade(1f, _entranceAnimationDuration * 0.6f).SetEase(Ease.OutQuad));
+            }
+            
+            // Анимация основной панели или отдельных компонентов
+            if (_mainPanel != null)
+            {
+                sequence.Insert(_componentsAnimationDelay,
+                    _mainPanel.DOScale(Vector3.one, _entranceAnimationDuration).SetEase(_entranceEase));
+            }
+            else
+            {
+                // Анимируем компоненты отдельно
+                if (_levelCounter != null)
+                {
+                    var counterRect = _levelCounter.GetComponent<RectTransform>();
+                    if (counterRect != null)
+                    {
+                        sequence.Insert(_componentsAnimationDelay,
+                            counterRect.DOScale(Vector3.one, _entranceAnimationDuration * 0.8f).SetEase(_entranceEase));
+                    }
+                }
+                
+                if (_playButton != null)
+                {
+                    var buttonRect = _playButton.GetComponent<RectTransform>();
+                    if (buttonRect != null)
+                    {
+                        sequence.Insert(_componentsAnimationDelay + 0.1f,
+                            buttonRect.DOScale(Vector3.one, _entranceAnimationDuration * 0.8f).SetEase(_entranceEase));
+                    }
+                }
+            }
+            
+            // Ждем завершения анимации
+            await sequence.AsyncWaitForCompletion();
+            
+            GameLogger.LogInfo(ScreenName, "Entrance animation completed");
+        }
+        
+        /// <summary>
+        /// Обновление всех компонентов при возврате в меню
         /// </summary>
         private async void OnEnable()
         {
-            // Обновляем UI только если экран уже инициализирован
+            // Обновляем компоненты только если экран уже инициализирован
             if (IsInitialized)
             {
-                GameLogger.LogInfo(ScreenName, "Main menu became active - refreshing progress and updating UI");
+                GameLogger.LogInfo(ScreenName, "Main menu became active - refreshing all components");
                 
-                // Принудительно перезагружаем прогресс из сохранения
-                await RefreshProgressAndUpdateUI();
+                // Принудительно обновляем прогресс
+                await RefreshProgressAndUpdateComponents();
             }
         }
         
         /// <summary>
-        /// НОВОЕ: Перезагрузка прогресса и обновление UI
+        /// Обновление прогресса и всех компонентов
         /// </summary>
-        private async UniTask RefreshProgressAndUpdateUI()
+        private async UniTask RefreshProgressAndUpdateComponents()
         {
             try
             {
-                // Принудительно обновляем прогресс из диска
+                // Обновляем прогресс из сохранения
                 if (ProgressService?.IsInitialized == true)
                 {
                     var progressServiceImpl = ProgressService as WordPuzzle.Data.Persistence.ProgressService;
                     if (progressServiceImpl != null)
                     {
                         await progressServiceImpl.RefreshProgressAsync();
+                        GameLogger.LogInfo(ScreenName, "Progress refreshed from disk");
                     }
                 }
                 
-                // Обновляем UI после загрузки свежих данных
-                UpdateLevelCounter();
-                SetupPlayButton();
+                // Обновляем счетчик уровней
+                if (_levelCounter != null)
+                {
+                    _levelCounter.UpdateDisplay();
+                }
+                
+                // Обновляем кнопку Play
+                if (_playButton != null)
+                {
+                    _playButton.UpdateButtonState();
+                }
+                
+                GameLogger.LogInfo(ScreenName, "All components updated successfully");
             }
             catch (System.Exception ex)
             {
                 GameLogger.LogException(ScreenName, ex);
-                // В случае ошибки просто обновляем UI с текущими данными
-                UpdateLevelCounter();
-                SetupPlayButton();
+                
+                // В случае ошибки просто обновляем компоненты с текущими данными
+                _levelCounter?.UpdateDisplay();
+                _playButton?.UpdateButtonState();
             }
         }
         
         /// <summary>
-        /// НОВОЕ: Показать диалог завершения всех уровней
+        /// Обработка нажатия Play button через компонент
         /// </summary>
-        private void ShowGameCompletionDialog(int totalLevels)
+        private void OnPlayButtonClicked(int levelId)
         {
-            string title = "Поздравляем!";
-            string message = $"Вы прошли все {totalLevels} уровней!\n\nХотите начать игру заново?";
+            GameLogger.LogInfo(ScreenName, $"Play button clicked from component, level: {levelId}");
             
-            UIService.ShowConfirmDialog(
-                title,
-                message,
+            // Дополнительная логика при необходимости
+            // Основная логика уже в PlayButton компоненте
+        }
+        
+        /// <summary>
+        /// Обработка изменения состояния Play button
+        /// </summary>
+        private void OnPlayButtonStateChanged(PlayButtonState newState)
+        {
+            GameLogger.LogInfo(ScreenName, $"Play button state changed to: {newState}");
+            
+            // Можно добавить дополнительные эффекты в зависимости от состояния
+            switch (newState)
+            {
+                case PlayButtonState.GameCompleted:
+                    // Например, можно добавить конфетти или другие эффекты
+                    UIService?.PlayUISound(UISoundType.Success);
+                    break;
+                    
+                case PlayButtonState.Error:
+                    UIService?.PlayUISound(UISoundType.Error);
+                    break;
+            }
+        }
+        
+        /// <summary>
+        /// Обработка кнопки сброса прогресса (отладка)
+        /// </summary>
+        private void OnResetProgressClicked()
+        {
+            GameLogger.LogInfo(ScreenName, "Reset progress button clicked (debug)");
+            
+            UIService?.ShowConfirmDialog(
+                "Reset Progress (Debug)",
+                "Are you sure you want to reset all progress? This cannot be undone.\n\n(This is a debug feature)",
                 onConfirm: async () =>
                 {
-                    GameLogger.LogInfo(ScreenName, "Player confirmed game restart - resetting progress");
-                    await ResetProgressAndStartNewGame();
+                    try
+                    {
+                        // Сбрасываем прогресс
+                        ProgressService.ResetProgress();
+                        
+                        // Сбрасываем анимации компонентов для демонстрации
+                        _levelCounter?.ResetAnimation();
+                        
+                        // Обновляем компоненты
+                        await RefreshProgressAndUpdateComponents();
+                        
+                        UIService?.ShowMessage("Progress reset successfully! (Debug)", 2f);
+                        GameLogger.LogInfo(ScreenName, "Debug progress reset completed");
+                    }
+                    catch (System.Exception ex)
+                    {
+                        GameLogger.LogException(ScreenName, ex);
+                        UIService?.ShowMessage("Failed to reset progress", 3f);
+                    }
                 },
                 onCancel: () =>
                 {
-                    GameLogger.LogInfo(ScreenName, "Player cancelled game restart");
+                    GameLogger.LogInfo(ScreenName, "Debug progress reset cancelled");
                 }
             );
         }
         
         /// <summary>
-        /// НОВОЕ: Сброс прогресса и начало новой игры
+        /// Очистка ресурсов
         /// </summary>
-        private async UniTask ResetProgressAndStartNewGame()
+        protected override void OnCleanup()
         {
-            try
+            // Останавливаем все анимации
+            DOTween.Kill(this);
+            
+            if (_titleText != null)
             {
-                // Сбрасываем прогресс
-                ProgressService.ResetProgress();
-                GameLogger.LogInfo(ScreenName, "Progress reset completed");
-                
-                // Обновляем UI
-                await RefreshProgressAndUpdateUI();
-                
-                // Показываем уведомление
-                UIService.ShowMessage("Прогресс сброшен! Начинаем заново.", 2f);
-                
-                // Небольшая задержка для показа сообщения
-                await UniTask.Delay(1000);
-                
-                // Запускаем первый уровень
-                StartLevel(1);
+                DOTween.Kill(_titleText);
             }
-            catch (System.Exception ex)
+            
+            if (_mainPanel != null)
             {
-                GameLogger.LogException(ScreenName, ex);
-                UIService.ShowMessage("Ошибка при сбросе прогресса. Попробуйте еще раз.", 3f);
+                DOTween.Kill(_mainPanel);
             }
         }
         
         /// <summary>
-        /// НОВОЕ: Запуск конкретного уровня
+        /// Получение отладочной информации
         /// </summary>
-        private void StartLevel(int levelId)
+        public string GetDebugInfo()
         {
-            try
+            var levelCounterInfo = _levelCounter?.GetDebugInfo() ?? "LevelCounter: null";
+            var playButtonInfo = _playButton?.GetDebugInfo() ?? "PlayButton: null";
+            
+            return $"MainMenuScreen Debug:\n" +
+                   $"- Screen Initialized: {IsInitialized}\n" +
+                   $"- Components Found: LC={_levelCounter != null}, PB={_playButton != null}\n" +
+                   $"- Services Ready: Progress={ProgressService?.IsInitialized}, Level={LevelService?.IsInitialized}\n\n" +
+                   $"{levelCounterInfo}\n\n" +
+                   $"{playButtonInfo}";
+        }
+        
+        #if UNITY_EDITOR
+        /// <summary>
+        /// Тестовые методы для редактора
+        /// </summary>
+        [ContextMenu("Test Refresh Components")]
+        private async Task TestRefreshComponents()
+        {
+            await RefreshProgressAndUpdateComponents();
+        }
+        
+        [ContextMenu("Test Entrance Animation")]
+        private void TestEntranceAnimation()
+        {
+            if (_enableEntranceAnimation)
             {
-                // Создаем параметры для передачи в игровую сцену
-                var gameplayParameters = new GameplayParameters
-                {
-                    LevelId = levelId
-                };
-                
-                GameLogger.LogInfo(ScreenName, $"Starting level {levelId}");
-                
-                // Загружаем игровую сцену с параметрами
-                LoadSceneWithParametersSafe(SceneNames.Gameplay, gameplayParameters);
-            }
-            catch (System.Exception ex)
-            {
-                GameLogger.LogException(ScreenName, ex);
-                UIService.ShowMessage("Ошибка запуска уровня. Попробуйте еще раз.", 3f);
+                PrepareComponentsForAnimation();
+                PlayEntranceAnimation();
             }
         }
         
+        [ContextMenu("Show Debug Info")]
+        private void ShowDebugInfo()
+        {
+            Debug.Log(GetDebugInfo());
+        }
+        #endif
+        
+        /// <summary>
+        /// Класс параметров для игрового экрана
+        /// Сохранен для совместимости с существующим кодом
+        /// </summary>
         [System.Serializable]
         public class GameplayParameters
         {
