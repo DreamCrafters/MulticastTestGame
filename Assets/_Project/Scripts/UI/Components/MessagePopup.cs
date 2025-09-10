@@ -8,6 +8,7 @@ namespace WordPuzzle.UI.Components
 {
     /// <summary>
     /// Компонент всплывающего сообщения
+    /// ИСПРАВЛЕНО: правильный порядок инициализации CanvasGroup
     /// </summary>
     public class MessagePopup : MonoBehaviour
     {
@@ -33,19 +34,29 @@ namespace WordPuzzle.UI.Components
         }
 
         /// <summary>
-        /// Настройка компонентов
+        /// ИСПРАВЛЕНО: Настройка компонентов с правильным порядком
         /// </summary>
         private void SetupComponents()
         {
+            // ИСПРАВЛЕНИЕ: Сначала создаем/проверяем CanvasGroup ПЕРЕД его использованием
             if (_canvasGroup == null)
-                _canvasGroup = GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>();
+            {
+                _canvasGroup = GetComponent<CanvasGroup>();
+                if (_canvasGroup == null)
+                {
+                    _canvasGroup = gameObject.AddComponent<CanvasGroup>();
+                    Debug.Log("[MessagePopup] CanvasGroup component added dynamically");
+                }
+            }
 
             CreateBasicElements();
 
-            // Начальное состояние
+            // ИСПРАВЛЕНИЕ: Теперь безопасно устанавливаем параметры, так как CanvasGroup точно существует
             _canvasGroup.alpha = 0f;
             transform.localScale = Vector3.zero;
             gameObject.SetActive(false);
+            
+            Debug.Log("[MessagePopup] MessagePopup components setup completed successfully");
         }
 
         /// <summary>
@@ -57,6 +68,15 @@ namespace WordPuzzle.UI.Components
             {
                 _backgroundImage = gameObject.AddComponent<Image>();
                 _backgroundImage.color = new Color(0.1f, 0.1f, 0.1f, 0.9f);
+                
+                // Настройка размера для сообщений
+                var rect = GetComponent<RectTransform>();
+                if (rect == null)
+                {
+                    rect = gameObject.AddComponent<RectTransform>();
+                }
+                
+                Debug.Log("[MessagePopup] Background image created");
             }
 
             if (_messageText == null)
@@ -75,6 +95,8 @@ namespace WordPuzzle.UI.Components
                 textRect.anchorMax = Vector2.one;
                 textRect.offsetMin = Vector2.zero;
                 textRect.offsetMax = Vector2.zero;
+                
+                Debug.Log("[MessagePopup] Message text created");
             }
         }
 
@@ -83,6 +105,13 @@ namespace WordPuzzle.UI.Components
         /// </summary>
         public void Show(string message, float duration, Action onComplete = null)
         {
+            if (_canvasGroup == null)
+            {
+                Debug.LogError("[MessagePopup] Cannot show message - CanvasGroup is null!");
+                onComplete?.Invoke();
+                return;
+            }
+            
             _onHideComplete = onComplete;
 
             gameObject.SetActive(true);
@@ -93,6 +122,8 @@ namespace WordPuzzle.UI.Components
             sequence.Join(transform.DOScale(Vector3.one, _showDuration).SetEase(_showEase));
             sequence.AppendInterval(duration);
             sequence.AppendCallback(Hide);
+            
+            Debug.Log($"[MessagePopup] Message shown: {message} (duration: {duration}s)");
         }
 
         /// <summary>
@@ -100,6 +131,15 @@ namespace WordPuzzle.UI.Components
         /// </summary>
         public void Hide()
         {
+            if (_canvasGroup == null)
+            {
+                Debug.LogError("[MessagePopup] Cannot hide message - CanvasGroup is null!");
+                gameObject.SetActive(false);
+                _onHideComplete?.Invoke();
+                Destroy(gameObject);
+                return;
+            }
+            
             var sequence = DOTween.Sequence();
             sequence.Append(_canvasGroup.DOFade(0f, _hideDuration).SetEase(_hideEase));
             sequence.Join(transform.DOScale(Vector3.zero, _hideDuration).SetEase(_hideEase));
@@ -109,11 +149,28 @@ namespace WordPuzzle.UI.Components
                 _onHideComplete?.Invoke();
                 Destroy(gameObject);
             });
+            
+            Debug.Log("[MessagePopup] Message hidden");
         }
 
+        /// <summary>
+        /// Очистка при уничтожении
+        /// </summary>
         private void OnDestroy()
         {
             DOTween.Kill(this);
+        }
+        
+        /// <summary>
+        /// Валидация компонента в редакторе
+        /// </summary>
+        private void OnValidate()
+        {
+            // Автоматически находим CanvasGroup если он не назначен
+            if (_canvasGroup == null && gameObject != null)
+            {
+                _canvasGroup = GetComponent<CanvasGroup>();
+            }
         }
     }
 }

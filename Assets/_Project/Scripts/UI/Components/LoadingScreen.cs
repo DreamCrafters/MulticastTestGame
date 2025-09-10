@@ -9,6 +9,7 @@ namespace WordPuzzle.UI.Components
 {
     /// <summary>
     /// Компонент экрана загрузки
+    /// ИСПРАВЛЕНО: правильный порядок инициализации CanvasGroup
     /// </summary>
     public class LoadingScreen : MonoBehaviour
     {
@@ -35,13 +36,22 @@ namespace WordPuzzle.UI.Components
         }
         
         /// <summary>
-        /// Настройка компонентов если они не назначены
+        /// Настройка компонентов с правильным порядком
         /// </summary>
         private void SetupComponents()
         {
+            // ИСПРАВЛЕНИЕ: Сначала создаем/проверяем CanvasGroup ПЕРЕД его использованием
             if (_canvasGroup == null)
-                _canvasGroup = GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>();
+            {
+                _canvasGroup = GetComponent<CanvasGroup>();
+                if (_canvasGroup == null)
+                {
+                    _canvasGroup = gameObject.AddComponent<CanvasGroup>();
+                    GameLogger.LogInfo("LoadingScreen", "CanvasGroup component added dynamically");
+                }
+            }
             
+            // Проверяем остальные компоненты
             if (_backgroundImage == null)
                 _backgroundImage = GetComponent<Image>();
             
@@ -51,9 +61,11 @@ namespace WordPuzzle.UI.Components
             // Создаем базовые элементы если не назначены
             CreateBasicElements();
             
-            // Изначально скрыт
+            // Теперь безопасно устанавливаем alpha, так как CanvasGroup точно существует
             _canvasGroup.alpha = 0f;
             gameObject.SetActive(false);
+            
+            GameLogger.LogInfo("LoadingScreen", "LoadingScreen components setup completed successfully");
         }
         
         /// <summary>
@@ -61,18 +73,26 @@ namespace WordPuzzle.UI.Components
         /// </summary>
         private void CreateBasicElements()
         {
+            // Background Image
             if (_backgroundImage == null)
             {
                 _backgroundImage = gameObject.AddComponent<Image>();
                 _backgroundImage.color = new Color(0, 0, 0, 0.8f);
                 
                 var rect = GetComponent<RectTransform>();
+                if (rect == null)
+                {
+                    rect = gameObject.AddComponent<RectTransform>();
+                }
                 rect.anchorMin = Vector2.zero;
                 rect.anchorMax = Vector2.one;
                 rect.offsetMin = Vector2.zero;
                 rect.offsetMax = Vector2.zero;
+                
+                GameLogger.LogInfo("LoadingScreen", "Background image created");
             }
             
+            // Loading Text
             if (_messageText == null)
             {
                 var textObject = new GameObject("LoadingText");
@@ -89,8 +109,11 @@ namespace WordPuzzle.UI.Components
                 textRect.anchorMax = new Vector2(0.5f, 0.4f);
                 textRect.sizeDelta = new Vector2(600, 50);
                 textRect.anchoredPosition = Vector2.zero;
+                
+                GameLogger.LogInfo("LoadingScreen", "Loading text created");
             }
             
+            // Spinner
             if (_spinnerTransform == null)
             {
                 CreateSpinner();
@@ -106,8 +129,14 @@ namespace WordPuzzle.UI.Components
             spinnerObject.transform.SetParent(transform, false);
             
             var spinnerImage = spinnerObject.AddComponent<Image>();
-            // Можно использовать простую иконку или создать спиннер из кода
             spinnerImage.color = Color.white;
+            
+            // Простой спиннер - белый круг
+            var texture = new Texture2D(1, 1);
+            texture.SetPixel(0, 0, Color.white);
+            texture.Apply();
+            var sprite = Sprite.Create(texture, new Rect(0, 0, 1, 1), new Vector2(0.5f, 0.5f));
+            spinnerImage.sprite = sprite;
             
             var spinnerRect = spinnerObject.GetComponent<RectTransform>();
             spinnerRect.anchorMin = new Vector2(0.5f, 0.6f);
@@ -116,6 +145,8 @@ namespace WordPuzzle.UI.Components
             spinnerRect.anchoredPosition = Vector2.zero;
             
             _spinnerTransform = spinnerObject.transform;
+            
+            GameLogger.LogInfo("LoadingScreen", "Spinner created");
         }
         
         /// <summary>
@@ -123,6 +154,12 @@ namespace WordPuzzle.UI.Components
         /// </summary>
         public void Show(string message)
         {
+            if (_canvasGroup == null)
+            {
+                GameLogger.LogError("LoadingScreen", "Cannot show - CanvasGroup is null!");
+                return;
+            }
+            
             if (_isShown) 
             {
                 UpdateMessage(message);
@@ -144,6 +181,13 @@ namespace WordPuzzle.UI.Components
         /// </summary>
         public void Hide(Action onComplete = null)
         {
+            if (_canvasGroup == null)
+            {
+                GameLogger.LogError("LoadingScreen", "Cannot hide - CanvasGroup is null!");
+                onComplete?.Invoke();
+                return;
+            }
+            
             if (!_isShown) 
             {
                 onComplete?.Invoke();
@@ -196,9 +240,25 @@ namespace WordPuzzle.UI.Components
             _spinnerTween?.Kill();
         }
         
+        /// <summary>
+        /// Очистка при уничтожении
+        /// </summary>
         private void OnDestroy()
         {
             _spinnerTween?.Kill();
+            DOTween.Kill(this);
+        }
+        
+        /// <summary>
+        /// Валидация компонента в редакторе
+        /// </summary>
+        private void OnValidate()
+        {
+            // Автоматически находим CanvasGroup если он не назначен
+            if (_canvasGroup == null && gameObject != null)
+            {
+                _canvasGroup = GetComponent<CanvasGroup>();
+            }
         }
     }
 }

@@ -8,6 +8,7 @@ namespace WordPuzzle.UI.Components
 {
     /// <summary>
     /// Компонент диалога подтверждения
+    /// ИСПРАВЛЕНО: правильный порядок инициализации CanvasGroup
     /// </summary>
     public class ConfirmDialog : MonoBehaviour
     {
@@ -38,20 +39,30 @@ namespace WordPuzzle.UI.Components
         }
 
         /// <summary>
-        /// Настройка компонентов
+        /// ИСПРАВЛЕНО: Настройка компонентов с правильным порядком
         /// </summary>
         private void SetupComponents()
         {
+            // ИСПРАВЛЕНИЕ: Сначала создаем/проверяем CanvasGroup ПЕРЕД его использованием
             if (_canvasGroup == null)
-                _canvasGroup = GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>();
+            {
+                _canvasGroup = GetComponent<CanvasGroup>();
+                if (_canvasGroup == null)
+                {
+                    _canvasGroup = gameObject.AddComponent<CanvasGroup>();
+                    Debug.Log("[ConfirmDialog] CanvasGroup component added dynamically");
+                }
+            }
 
             CreateBasicElements();
             SetupButtons();
 
-            // Начальное состояние
+            // ИСПРАВЛЕНИЕ: Теперь безопасно устанавливаем параметры, так как CanvasGroup точно существует
             _canvasGroup.alpha = 0f;
             transform.localScale = Vector3.zero;
             gameObject.SetActive(false);
+            
+            Debug.Log("[ConfirmDialog] ConfirmDialog components setup completed successfully");
         }
 
         /// <summary>
@@ -65,9 +76,15 @@ namespace WordPuzzle.UI.Components
                 _backgroundImage = gameObject.AddComponent<Image>();
                 _backgroundImage.color = new Color(0.2f, 0.2f, 0.2f, 0.95f);
 
-                // Добавляем закругленные углы если возможно
+                // Настройка размера
                 var rect = GetComponent<RectTransform>();
+                if (rect == null)
+                {
+                    rect = gameObject.AddComponent<RectTransform>();
+                }
                 rect.sizeDelta = new Vector2(500, 300);
+                
+                Debug.Log("[ConfirmDialog] Background image created");
             }
 
             // Title
@@ -87,6 +104,8 @@ namespace WordPuzzle.UI.Components
                 titleRect.anchorMax = new Vector2(1f, 0.9f);
                 titleRect.offsetMin = new Vector2(20, 0);
                 titleRect.offsetMax = new Vector2(-20, 0);
+                
+                Debug.Log("[ConfirmDialog] Title text created");
             }
 
             // Message
@@ -106,6 +125,8 @@ namespace WordPuzzle.UI.Components
                 messageRect.anchorMax = new Vector2(1f, 0.7f);
                 messageRect.offsetMin = new Vector2(30, 0);
                 messageRect.offsetMax = new Vector2(-30, 0);
+                
+                Debug.Log("[ConfirmDialog] Message text created");
             }
         }
 
@@ -144,6 +165,8 @@ namespace WordPuzzle.UI.Components
                 confirmTextRect.anchorMax = Vector2.one;
                 confirmTextRect.offsetMin = Vector2.zero;
                 confirmTextRect.offsetMax = Vector2.zero;
+                
+                Debug.Log("[ConfirmDialog] Confirm button created");
             }
 
             // Cancel Button
@@ -176,6 +199,8 @@ namespace WordPuzzle.UI.Components
                 cancelTextRect.anchorMax = Vector2.one;
                 cancelTextRect.offsetMin = Vector2.zero;
                 cancelTextRect.offsetMax = Vector2.zero;
+                
+                Debug.Log("[ConfirmDialog] Cancel button created");
             }
 
             // События кнопок
@@ -188,6 +213,12 @@ namespace WordPuzzle.UI.Components
         /// </summary>
         public void Show(string title, string message, Action confirmed = null, Action cancelled = null, Action onClose = null)
         {
+            if (_canvasGroup == null)
+            {
+                Debug.LogError("[ConfirmDialog] Cannot show dialog - CanvasGroup is null!");
+                return;
+            }
+            
             _onConfirm = confirmed;
             _onCancel = cancelled;
             _onClose = onClose;
@@ -200,6 +231,8 @@ namespace WordPuzzle.UI.Components
             var sequence = DOTween.Sequence();
             sequence.Append(_canvasGroup.DOFade(1f, _showDuration).SetEase(_showEase));
             sequence.Join(transform.DOScale(Vector3.one, _showDuration).SetEase(_showEase));
+            
+            Debug.Log($"[ConfirmDialog] Dialog shown: {title} - {message}");
         }
 
         /// <summary>
@@ -207,6 +240,13 @@ namespace WordPuzzle.UI.Components
         /// </summary>
         public void Hide()
         {
+            if (_canvasGroup == null)
+            {
+                Debug.LogError("[ConfirmDialog] Cannot hide dialog - CanvasGroup is null!");
+                _onClose?.Invoke();
+                return;
+            }
+            
             var sequence = DOTween.Sequence();
             sequence.Append(_canvasGroup.DOFade(0f, _hideDuration).SetEase(_hideEase));
             sequence.Join(transform.DOScale(Vector3.zero, _hideDuration).SetEase(_hideEase));
@@ -216,6 +256,8 @@ namespace WordPuzzle.UI.Components
                 _onClose?.Invoke();
                 Destroy(gameObject);
             });
+            
+            Debug.Log("[ConfirmDialog] Dialog hidden");
         }
 
         /// <summary>
@@ -223,6 +265,7 @@ namespace WordPuzzle.UI.Components
         /// </summary>
         private void OnConfirmClicked()
         {
+            Debug.Log("[ConfirmDialog] Confirm button clicked");
             _onConfirm?.Invoke();
             Hide();
         }
@@ -232,10 +275,14 @@ namespace WordPuzzle.UI.Components
         /// </summary>
         private void OnCancelClicked()
         {
+            Debug.Log("[ConfirmDialog] Cancel button clicked");
             _onCancel?.Invoke();
             Hide();
         }
 
+        /// <summary>
+        /// Очистка при уничтожении
+        /// </summary>
         private void OnDestroy()
         {
             DOTween.Kill(this);
@@ -245,6 +292,18 @@ namespace WordPuzzle.UI.Components
 
             if (_cancelButton != null)
                 _cancelButton.onClick.RemoveListener(OnCancelClicked);
+        }
+        
+        /// <summary>
+        /// Валидация компонента в редакторе
+        /// </summary>
+        private void OnValidate()
+        {
+            // Автоматически находим CanvasGroup если он не назначен
+            if (_canvasGroup == null && gameObject != null)
+            {
+                _canvasGroup = GetComponent<CanvasGroup>();
+            }
         }
     }
 }
