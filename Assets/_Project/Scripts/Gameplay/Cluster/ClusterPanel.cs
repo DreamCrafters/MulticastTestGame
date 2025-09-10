@@ -177,7 +177,6 @@ namespace WordPuzzle.Gameplay.Cluster
             }
             
             _horizontalLayoutGroup.spacing = _clusterSpacing;
-            _horizontalLayoutGroup.childAlignment = TextAnchor.MiddleLeft;
             _horizontalLayoutGroup.childControlWidth = false;
             _horizontalLayoutGroup.childControlHeight = false;
             _horizontalLayoutGroup.childForceExpandWidth = false;

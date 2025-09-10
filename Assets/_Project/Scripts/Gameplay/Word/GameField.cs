@@ -21,17 +21,11 @@ namespace WordPuzzle.Gameplay.Word
         [SerializeField] private Transform _slotsContainer;
         [SerializeField] private float _slotSpacing = 20f;
         
-        [Header("Visual Settings")]
-        [SerializeField] private bool _showFieldBackground = true;
-        [SerializeField] private Color _fieldBackgroundColor = new Color(0f, 0f, 0f, 0.1f);
-        [SerializeField] private Vector2 _fieldPadding = new Vector2(20, 20);
-        
         [Header("Layout Settings")]
         [SerializeField] private bool _useVerticalLayout = true;
         [SerializeField] private bool _autoSizeSlots = true;
         
         private readonly List<WordSlot> _wordSlots = new List<WordSlot>();
-        private Image _backgroundImage;
         private VerticalLayoutGroup _verticalLayoutGroup;
         private bool _isInitialized = false;
         
@@ -75,12 +69,6 @@ namespace WordPuzzle.Gameplay.Word
             // Настраиваем контейнер
             SetupContainer();
             
-            // Создаем фон поля
-            if (_showFieldBackground)
-            {
-                CreateFieldBackground();
-            }
-            
             // Настраиваем layout
             if (_useVerticalLayout)
             {
@@ -104,27 +92,6 @@ namespace WordPuzzle.Gameplay.Word
                 _slotsContainer = transform;
                 GameLogger.LogWarning("GameField", "Slots container not assigned, using self transform");
             }
-        }
-        
-        /// <summary>
-        /// Создание фона игрового поля
-        /// </summary>
-        private void CreateFieldBackground()
-        {
-            var backgroundObject = new GameObject("FieldBackground");
-            backgroundObject.transform.SetParent(transform, false);
-            backgroundObject.transform.SetAsFirstSibling(); // Фон позади всех элементов
-            
-            _backgroundImage = backgroundObject.AddComponent<Image>();
-            _backgroundImage.color = _fieldBackgroundColor;
-            
-            var backgroundRect = backgroundObject.GetComponent<RectTransform>();
-            backgroundRect.anchorMin = Vector2.zero;
-            backgroundRect.anchorMax = Vector2.one;
-            backgroundRect.offsetMin = -_fieldPadding;
-            backgroundRect.offsetMax = _fieldPadding;
-            
-            GameLogger.LogInfo("GameField", "Field background created");
         }
         
         /// <summary>

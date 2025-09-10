@@ -16,7 +16,6 @@ namespace WordPuzzle.Gameplay.Word
         [Header("Letter Cells")]
         [SerializeField] private LetterCell _letterCellPrefab;
         [SerializeField] private Transform _cellsContainer;
-        [SerializeField] private float _cellSpacing = 10f;
         
         private readonly List<LetterCell> _letterCells = new List<LetterCell>();
         private int _wordIndex = -1; // Индекс слова в игровом поле
@@ -285,11 +284,6 @@ namespace WordPuzzle.Gameplay.Word
             if (_maxLetters <= 0)
             {
                 _maxLetters = 6;
-            }
-            
-            if (_cellSpacing < 0)
-            {
-                _cellSpacing = 0;
             }
         }
         
