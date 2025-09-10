@@ -8,7 +8,7 @@ namespace WordPuzzle.UI.Components
 {
     /// <summary>
     /// Компонент диалога подтверждения
-    /// ПОЛНОСТЬЮ ИСПРАВЛЕНО: правильное создание UI элементов без ошибок
+    /// ИСПРАВЛЕНО: правильный порядок инициализации CanvasGroup
     /// </summary>
     public class ConfirmDialog : MonoBehaviour
     {
@@ -40,64 +40,34 @@ namespace WordPuzzle.UI.Components
         }
 
         /// <summary>
-        /// ИСПРАВЛЕНО: Безопасная настройка всех компонентов
+        /// ИСПРАВЛЕНО: Настройка компонентов с правильным порядком
         /// </summary>
         private void SetupComponents()
         {
-            try
-            {
-                Debug.Log("[ConfirmDialog] Starting SetupComponents...");
-
-                // ШАГ 1: Убеждаемся что у объекта есть RectTransform
-                if (GetComponent<RectTransform>() == null)
-                {
-                    gameObject.AddComponent<RectTransform>();
-                }
-
-                // ШАГ 2: Создаем/проверяем CanvasGroup ПЕРВЫМ
-                SetupCanvasGroup();
-
-                // ШАГ 3: Создаем базовые элементы
-                CreateBasicElements();
-
-                // ШАГ 4: Создаем кнопки
-                SetupButtons();
-
-                // ШАГ 5: Устанавливаем начальное состояние
-                _canvasGroup.alpha = 0f;
-                transform.localScale = Vector3.zero;
-                gameObject.SetActive(false);
-
-                Debug.Log("[ConfirmDialog] ConfirmDialog setup completed successfully");
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogError($"[ConfirmDialog] Error in SetupComponents: {ex.Message}");
-                Debug.LogException(ex);
-
-                // Создаем минимальные fallback компоненты
-                CreateFallbackDialog();
-            }
-        }
-
-        /// <summary>
-        /// НОВОЕ: Безопасная настройка CanvasGroup
-        /// </summary>
-        private void SetupCanvasGroup()
-        {
+            // ИСПРАВЛЕНИЕ: Сначала создаем/проверяем CanvasGroup ПЕРЕД его использованием
             if (_canvasGroup == null)
             {
                 _canvasGroup = GetComponent<CanvasGroup>();
                 if (_canvasGroup == null)
                 {
                     _canvasGroup = gameObject.AddComponent<CanvasGroup>();
-                    Debug.Log("[ConfirmDialog] CanvasGroup component added");
+                    Debug.Log("[ConfirmDialog] CanvasGroup component added dynamically");
                 }
             }
+
+            CreateBasicElements();
+            SetupButtons();
+
+            // ИСПРАВЛЕНИЕ: Теперь безопасно устанавливаем параметры, так как CanvasGroup точно существует
+            _canvasGroup.alpha = 0f;
+            transform.localScale = Vector3.zero;
+            gameObject.SetActive(false);
+            
+            Debug.Log("[ConfirmDialog] ConfirmDialog components setup completed successfully");
         }
 
         /// <summary>
-        /// ИСПРАВЛЕНО: Безопасное создание базовых элементов
+        /// Создание базовых элементов
         /// </summary>
         private void CreateBasicElements()
         {
@@ -179,43 +149,20 @@ namespace WordPuzzle.UI.Components
                 _messageText.fontSize = 20;
                 _messageText.color = Color.white;
                 _messageText.alignment = TextAlignmentOptions.Center;
-
                 _messageText.textWrappingMode = TextWrappingModes.Normal;
+
+                var messageRect = messageObject.GetComponent<RectTransform>();
+                messageRect.anchorMin = new Vector2(0f, 0.3f);
+                messageRect.anchorMax = new Vector2(1f, 0.7f);
+                messageRect.offsetMin = new Vector2(30, 0);
+                messageRect.offsetMax = new Vector2(-30, 0);
+                
                 Debug.Log("[ConfirmDialog] Message text created");
             }
-
-            Debug.Log("[ConfirmDialog] Basic elements creation completed");
         }
 
         /// <summary>
-        /// НОВОЕ: Безопасное создание текстовых элементов
-        /// </summary>
-        private TextMeshProUGUI CreateTextElement(string name, Vector2 anchorMin, Vector2 anchorMax, float fontSize, FontStyles fontStyle)
-        {
-            // Создаем GameObject
-            var textObject = new GameObject(name);
-            textObject.transform.SetParent(transform, false);
-
-            // Добавляем RectTransform
-            var rectTransform = textObject.AddComponent<RectTransform>();
-            rectTransform.anchorMin = anchorMin;
-            rectTransform.anchorMax = anchorMax;
-            rectTransform.offsetMin = new Vector2(20, 0);
-            rectTransform.offsetMax = new Vector2(-20, 0);
-
-            // Добавляем TextMeshProUGUI
-            var textComponent = textObject.AddComponent<TextMeshProUGUI>();
-            textComponent.text = name;
-            textComponent.fontSize = fontSize;
-            textComponent.color = Color.white;
-            textComponent.alignment = TextAlignmentOptions.Center;
-            textComponent.fontStyle = fontStyle;
-
-            return textComponent;
-        }
-
-        /// <summary>
-        /// ИСПРАВЛЕНО: Безопасное создание кнопок
+        /// Настройка кнопок
         /// </summary>
         private void SetupButtons()
         {
@@ -309,42 +256,30 @@ namespace WordPuzzle.UI.Components
         }
 
         /// <summary>
-        /// ИСПРАВЛЕНО: Показать диалог с полными проверками
+        /// Показать диалог
         /// </summary>
         public void Show(string title, string message, Action confirmed = null, Action cancelled = null, Action onClose = null)
         {
-            Debug.Log($"[ConfirmDialog] Show called with title: '{title}', message: '{message}'");
-
             if (_canvasGroup == null)
             {
-                Debug.LogError("[ConfirmDialog] Critical error - CanvasGroup is null even after setup!");
-                confirmed?.Invoke(); // Вызываем подтверждение по умолчанию
+                Debug.LogError("[ConfirmDialog] Cannot show dialog - CanvasGroup is null!");
                 return;
             }
-
+            
             _onConfirm = confirmed;
             _onCancel = cancelled;
             _onClose = onClose;
 
-            // Безопасная установка текста
-            if (_titleText != null)
-            {
-                _titleText.text = title ?? "Confirm";
-            }
-
-            if (_messageText != null)
-            {
-                _messageText.text = message ?? "";
-            }
+            _titleText.text = title ?? "Confirm";
+            _messageText.text = message ?? "";
 
             gameObject.SetActive(true);
 
-            // Анимация появления
             var sequence = DOTween.Sequence();
             sequence.Append(_canvasGroup.DOFade(1f, _showDuration).SetEase(_showEase));
             sequence.Join(transform.DOScale(Vector3.one, _showDuration).SetEase(_showEase));
-
-            Debug.Log($"[ConfirmDialog] Dialog shown successfully");
+            
+            Debug.Log($"[ConfirmDialog] Dialog shown: {title} - {message}");
         }
 
         /// <summary>
@@ -354,13 +289,11 @@ namespace WordPuzzle.UI.Components
         {
             if (_canvasGroup == null)
             {
-                Debug.LogError("[ConfirmDialog] Cannot hide - CanvasGroup is null!");
-                gameObject.SetActive(false);
+                Debug.LogError("[ConfirmDialog] Cannot hide dialog - CanvasGroup is null!");
                 _onClose?.Invoke();
-                Destroy(gameObject);
                 return;
             }
-
+            
             var sequence = DOTween.Sequence();
             sequence.Append(_canvasGroup.DOFade(0f, _hideDuration).SetEase(_hideEase));
             sequence.Join(transform.DOScale(Vector3.zero, _hideDuration).SetEase(_hideEase));
@@ -370,7 +303,7 @@ namespace WordPuzzle.UI.Components
                 _onClose?.Invoke();
                 Destroy(gameObject);
             });
-
+            
             Debug.Log("[ConfirmDialog] Dialog hidden");
         }
 
@@ -422,6 +355,18 @@ namespace WordPuzzle.UI.Components
                 var blockerButton = _fullscreenBlocker.gameObject.GetComponent<Button>();
                 if (blockerButton != null)
                     blockerButton.onClick.RemoveListener(OnBackgroundClicked);
+            }
+        }
+        
+        /// <summary>
+        /// Валидация компонента в редакторе
+        /// </summary>
+        private void OnValidate()
+        {
+            // Автоматически находим CanvasGroup если он не назначен
+            if (_canvasGroup == null && gameObject != null)
+            {
+                _canvasGroup = GetComponent<CanvasGroup>();
             }
         }
     }
