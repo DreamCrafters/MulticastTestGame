@@ -430,8 +430,8 @@ Canvas:
   m_OverrideSorting: 0
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
-  m_VertexColorAlwaysGammaSpace: 0
-  m_AdditionalShaderChannelsFlag: 25
+  m_VertexColorAlwaysGammaSpace: 1
+  m_AdditionalShaderChannelsFlag: 1
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
   m_SortingOrder: 0
@@ -455,9 +455,11 @@ MonoBehaviour:
   _levelInfoText: {fileID: 410125446}
   _gameField: {fileID: 1458416824}
   _clusterPanel: {fileID: 189704652}
+  _clusterManager: {fileID: 1297705956}
   _gameFieldContainer: {fileID: 1623492594}
   _clusterPanelContainer: {fileID: 379853884}
   _autoLoadGameField: 1
+  _enableClusterManagerEvents: 1
 --- !u!1 &189704647
 GameObject:
   m_ObjectHideFlags: 0
@@ -1354,6 +1356,56 @@ MonoBehaviour:
   m_FirstSelected: {fileID: 0}
   m_sendNavigationEvents: 1
   m_DragThreshold: 10
+--- !u!1 &1297705954
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1297705955}
+  - component: {fileID: 1297705956}
+  m_Layer: 0
+  m_Name: ClusterManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1297705955
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1297705954}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 559.8738, y: 181.40268, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1297705956
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1297705954}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0ea12b0b768e6499b963db88da3a3274, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::WordPuzzle.Gameplay.Cluster.ClusterManager
+  _clusterPanel: {fileID: 189704652}
+  _autoInitializeWithPanel: 1
+  _enableClusterValidation: 1
+  _allowDuplicateClusters: 1
+  _maxClustersPerLevel: 20
+  _enableDebugLogging: 1
 --- !u!1 &1458416822
 GameObject:
   m_ObjectHideFlags: 0
@@ -1744,3 +1796,4 @@ SceneRoots:
   - {fileID: 1680004735}
   - {fileID: 629272735}
   - {fileID: 678424350}
+  - {fileID: 1297705955}

@@ -10,8 +10,7 @@ using WordPuzzle.Data.Models;
 namespace WordPuzzle.UI.Screens
 {
     /// <summary>
-    /// Экран игрового процесса (ОБНОВЛЕН для Этапа 6)
-    /// Интегрирует GameField и ClusterPanel для базовой структуры игрового поля
+    /// Экран игрового процесса
     /// </summary>
     public class GameplayScreen : BaseScreen
     {
@@ -20,9 +19,10 @@ namespace WordPuzzle.UI.Screens
         [SerializeField] private Button _mockWinButton;
         [SerializeField] private TextMeshProUGUI _levelInfoText;
         
-        [Header("Gameplay Components (NEW)")]
+        [Header("Gameplay Components")]
         [SerializeField] private GameField _gameField;
         [SerializeField] private ClusterPanel _clusterPanel;
+        [SerializeField] private ClusterManager _clusterManager;
         
         [Header("Layout Components")]
         [SerializeField] private RectTransform _gameFieldContainer;
@@ -30,6 +30,7 @@ namespace WordPuzzle.UI.Screens
         
         [Header("Settings")]
         [SerializeField] private bool _autoLoadGameField = true;
+        [SerializeField] private bool _enableClusterManagerEvents = true;
 
         private int _currentLevelId;
         private LevelData _currentLevelData;
@@ -38,7 +39,7 @@ namespace WordPuzzle.UI.Screens
 
         protected override void OnInitialize()
         {
-            GameLogger.LogInfo(ScreenName, "Setting up Gameplay screen with GameField and ClusterPanel...");
+            GameLogger.LogInfo(ScreenName, "Setting up Gameplay screen with enhanced cluster system...");
 
             LoadLevelParameters();
             SetupNavigation();
@@ -51,7 +52,7 @@ namespace WordPuzzle.UI.Screens
                 LoadLevelDataAsync();
             }
 
-            GameLogger.LogInfo(ScreenName, "Gameplay screen setup completed with new components");
+            GameLogger.LogInfo(ScreenName, "Gameplay screen setup completed with ClusterManager");
         }
 
         protected override void SubscribeToUIEvents()
@@ -66,6 +67,11 @@ namespace WordPuzzle.UI.Screens
             {
                 _mockWinButton.onClick.AddListener(OnMockWinClicked);
             }
+
+            if (_enableClusterManagerEvents && _clusterManager != null)
+            {
+                SubscribeToClusterManagerEvents();
+            }
         }
 
         protected override void UnsubscribeFromUIEvents()
@@ -79,6 +85,12 @@ namespace WordPuzzle.UI.Screens
             if (_mockWinButton != null)
             {
                 _mockWinButton.onClick.RemoveListener(OnMockWinClicked);
+            }
+
+            // НОВОЕ: Отписка от событий ClusterManager
+            if (_clusterManager != null)
+            {
+                UnsubscribeFromClusterManagerEvents();
             }
         }
 
@@ -144,7 +156,7 @@ namespace WordPuzzle.UI.Screens
         }
         
         /// <summary>
-        /// НОВОЕ: Настройка компонентов игрового поля
+        /// ОБНОВЛЕНО: Настройка компонентов игрового поля с ClusterManager
         /// </summary>
         private void SetupGameplayComponents()
         {
@@ -185,9 +197,31 @@ namespace WordPuzzle.UI.Screens
                     _clusterPanel = clusterPanelObject.AddComponent<ClusterPanel>();
                 }
             }
+
+            // НОВОЕ: Проверяем и создаем ClusterManager
+            if (_clusterManager == null)
+            {
+                GameLogger.LogInfo(ScreenName, "ClusterManager not assigned, looking for existing component...");
+                _clusterManager = FindFirstObjectByType<ClusterManager>();
+                
+                if (_clusterManager == null)
+                {
+                    GameLogger.LogInfo(ScreenName, "Creating ClusterManager dynamically...");
+                    var clusterManagerObject = new GameObject("ClusterManager");
+                    clusterManagerObject.transform.SetParent(transform, false);
+                    _clusterManager = clusterManagerObject.AddComponent<ClusterManager>();
+                    
+                    // Связываем с ClusterPanel
+                    if (_clusterPanel != null)
+                    {
+                        // ClusterManager автоматически найдет ClusterPanel при инициализации
+                        GameLogger.LogInfo(ScreenName, "ClusterManager will auto-link with ClusterPanel");
+                    }
+                }
+            }
             
             // Логирование состояния компонентов
-            GameLogger.LogInfo(ScreenName, $"Gameplay components status: GameField={_gameField != null}, ClusterPanel={_clusterPanel != null}");
+            GameLogger.LogInfo(ScreenName, $"Gameplay components status: GameField={_gameField != null}, ClusterPanel={_clusterPanel != null}, ClusterManager={_clusterManager != null}");
             
             if (_gameField != null)
             {
@@ -198,16 +232,49 @@ namespace WordPuzzle.UI.Screens
             {
                 GameLogger.LogInfo(ScreenName, $"ClusterPanel initialized: {_clusterPanel.IsInitialized}");
             }
+
+            if (_clusterManager != null)
+            {
+                GameLogger.LogInfo(ScreenName, $"ClusterManager initialized: {_clusterManager.IsInitialized}");
+            }
+        }
+
+        /// <summary>
+        /// НОВОЕ: Подписка на события ClusterManager
+        /// </summary>
+        private void SubscribeToClusterManagerEvents()
+        {
+            _clusterManager.OnClusterCreated += OnClusterCreated;
+            _clusterManager.OnClusterPlaced += OnClusterPlaced;
+            _clusterManager.OnClusterRemoved += OnClusterRemoved;
+            _clusterManager.OnClusterSelected += OnClusterSelected;
+            _clusterManager.OnAllClustersValidated += OnAllClustersValidated;
+
+            GameLogger.LogInfo(ScreenName, "Subscribed to ClusterManager events");
+        }
+
+        /// <summary>
+        /// НОВОЕ: Отписка от событий ClusterManager
+        /// </summary>
+        private void UnsubscribeFromClusterManagerEvents()
+        {
+            _clusterManager.OnClusterCreated -= OnClusterCreated;
+            _clusterManager.OnClusterPlaced -= OnClusterPlaced;
+            _clusterManager.OnClusterRemoved -= OnClusterRemoved;
+            _clusterManager.OnClusterSelected -= OnClusterSelected;
+            _clusterManager.OnAllClustersValidated -= OnAllClustersValidated;
+
+            GameLogger.LogInfo(ScreenName, "Unsubscribed from ClusterManager events");
         }
         
         /// <summary>
-        /// ОБНОВЛЕНО: Загрузка данных уровня и настройка компонентов игрового поля
+        /// ОБНОВЛЕНО: Загрузка данных уровня через ClusterManager
         /// </summary>
         private async void LoadLevelDataAsync()
         {
             try
             {
-                GameLogger.LogInfo(ScreenName, $"Loading level {_currentLevelId} data for game field setup...");
+                GameLogger.LogInfo(ScreenName, $"Loading level {_currentLevelId} data for enhanced cluster system...");
 
                 var levelData = await LevelService.LoadLevelAsync(_currentLevelId);
 
@@ -226,7 +293,7 @@ namespace WordPuzzle.UI.Screens
 
                     GameLogger.LogInfo(ScreenName, $"Available clusters: [{string.Join(", ", levelData.AvailableClusters)}]");
 
-                    // НОВОЕ: Настраиваем игровое поле с загруженными данными
+                    // ОБНОВЛЕНО: Используем ClusterManager для настройки
                     SetupGameFieldWithLevelData(levelData);
                     
                     // Обновляем UI с реальными данными
@@ -247,7 +314,7 @@ namespace WordPuzzle.UI.Screens
         }
         
         /// <summary>
-        /// НОВОЕ: Настройка игрового поля с данными уровня
+        /// ОБНОВЛЕНО: Настройка игрового поля через ClusterManager
         /// </summary>
         private void SetupGameFieldWithLevelData(LevelData levelData)
         {
@@ -262,26 +329,194 @@ namespace WordPuzzle.UI.Screens
                 GameLogger.LogWarning(ScreenName, "GameField is null, cannot setup with level data");
             }
             
-            // НОВОЕ: Создание кластеров в панели
-            if (_clusterPanel != null)
+            // ОБНОВЛЕНО: Используем ClusterManager для загрузки кластеров
+            if (_clusterManager != null)
             {
-                _clusterPanel.CreateClusters(levelData);
-                GameLogger.LogInfo(ScreenName, "ClusterPanel populated with level clusters");
+                _clusterManager.LoadLevel(levelData);
+                GameLogger.LogInfo(ScreenName, "ClusterManager loaded level data and created clusters");
             }
             else
             {
-                GameLogger.LogWarning(ScreenName, "ClusterPanel is null, cannot create clusters");
+                GameLogger.LogWarning(ScreenName, "ClusterManager is null, falling back to ClusterPanel");
+                
+                // Fallback: используем ClusterPanel напрямую
+                if (_clusterPanel != null)
+                {
+                    _clusterPanel.CreateClusters(levelData);
+                    GameLogger.LogInfo(ScreenName, "ClusterPanel populated with level clusters (fallback)");
+                }
             }
         }
         
         /// <summary>
-        /// НОВОЕ: Обновление UI с данными уровня
+        /// ОБНОВЛЕНО: Обновление UI с расширенной информацией
         /// </summary>
         private void UpdateUIWithLevelData(LevelData levelData)
         {
             if (_levelInfoText != null)
             {
-                _levelInfoText.text = $"Level {levelData.LevelId}\n{levelData.TargetWords.Length} words, {levelData.AvailableClusters.Length} clusters";
+                string clusterStats = "";
+                if (_clusterManager != null && _clusterManager.IsInitialized)
+                {
+                    clusterStats = $"\nAvailable: {_clusterManager.AvailableClusters.Count}, Placed: {_clusterManager.PlacedClusters.Count}";
+                }
+
+                _levelInfoText.text = $"Level {levelData.LevelId}\n{levelData.TargetWords.Length} words, {levelData.AvailableClusters.Length} clusters{clusterStats}";
+            }
+        }
+
+        // НОВЫЕ: Обработчики событий ClusterManager
+
+        /// <summary>
+        /// Обработка создания кластера
+        /// </summary>
+        private void OnClusterCreated(ClusterData cluster)
+        {
+            GameLogger.LogInfo(ScreenName, $"Cluster created: '{cluster.Text}' (ID: {cluster.ClusterId})");
+            // Здесь можно добавить дополнительную логику, например, анимации
+        }
+
+        /// <summary>
+        /// Обработка размещения кластера
+        /// </summary>
+        private void OnClusterPlaced(ClusterData cluster)
+        {
+            GameLogger.LogInfo(ScreenName, $"Cluster placed: '{cluster.Text}' at word {cluster.Position.WordIndex}, cell {cluster.Position.StartCellIndex}");
+            
+            // Обновляем UI
+            if (_levelInfoText != null && _clusterManager != null)
+            {
+                UpdateUIWithLevelData(_currentLevelData);
+            }
+            
+            // Проверяем завершение уровня
+            if (_clusterManager != null && _clusterManager.IsLevelComplete())
+            {
+                GameLogger.LogInfo(ScreenName, "Level completed through cluster placement!");
+                // Здесь можно добавить автоматическую проверку решения
+            }
+        }
+
+        /// <summary>
+        /// Обработка удаления кластера
+        /// </summary>
+        private void OnClusterRemoved(ClusterData cluster)
+        {
+            GameLogger.LogInfo(ScreenName, $"Cluster removed: '{cluster.Text}' (ID: {cluster.ClusterId})");
+            
+            // Обновляем UI
+            if (_levelInfoText != null && _clusterManager != null)
+            {
+                UpdateUIWithLevelData(_currentLevelData);
+            }
+        }
+
+        /// <summary>
+        /// Обработка выбора кластера
+        /// </summary>
+        private void OnClusterSelected(ClusterData cluster)
+        {
+            GameLogger.LogInfo(ScreenName, $"Cluster selected: '{cluster.Text}' (ID: {cluster.ClusterId})");
+            // Здесь можно добавить подсветку возможных позиций для размещения
+        }
+
+        /// <summary>
+        /// Обработка завершения валидации кластеров
+        /// </summary>
+        private void OnAllClustersValidated()
+        {
+            GameLogger.LogInfo(ScreenName, "All clusters validated successfully");
+            UIService.ShowMessage("All clusters are valid!", 2f);
+        }
+
+        // НОВЫЕ: Обработчики тестовых кнопок
+
+        /// <summary>
+        /// Тестовое создание кластеров
+        /// </summary>
+        private void OnTestCreateClustersClicked()
+        {
+            GameLogger.LogInfo(ScreenName, "Test Create Clusters button clicked");
+            
+            if (_clusterManager != null)
+            {
+                _clusterManager.CreateTestLevel();
+                UIService.ShowMessage("Test clusters created via ClusterManager", 2f);
+            }
+            else if (_clusterPanel != null)
+            {
+                _clusterPanel.CreateTestClusters();
+                UIService.ShowMessage("Test clusters created via ClusterPanel (fallback)", 2f);
+            }
+            else
+            {
+                GameLogger.LogWarning(ScreenName, "No cluster components available");
+                UIService.ShowMessage("No cluster components available", 2f);
+            }
+        }
+
+        /// <summary>
+        /// Тестовая очистка всех кластеров
+        /// </summary>
+        private void OnTestClearAllClicked()
+        {
+            GameLogger.LogInfo(ScreenName, "Test Clear All button clicked");
+            
+            bool cleared = false;
+            
+            if (_gameField != null)
+            {
+                _gameField.ClearAllLetters();
+                cleared = true;
+            }
+            
+            if (_clusterManager != null)
+            {
+                _clusterManager.ClearAllClusters();
+                cleared = true;
+            }
+            else if (_clusterPanel != null)
+            {
+                _clusterPanel.ClearAllClusters();
+                cleared = true;
+            }
+            
+            if (cleared)
+            {
+                UIService.ShowMessage("Game field and clusters cleared", 2f);
+                // Обновляем UI
+                if (_levelInfoText != null)
+                {
+                    _levelInfoText.text = $"Level {_currentLevelId} (Cleared)";
+                }
+            }
+            else
+            {
+                GameLogger.LogWarning(ScreenName, "No components available to clear");
+                UIService.ShowMessage("No components to clear", 2f);
+            }
+        }
+
+        /// <summary>
+        /// НОВОЕ: Тестовая валидация кластеров
+        /// </summary>
+        private void OnTestValidateClustersClicked()
+        {
+            GameLogger.LogInfo(ScreenName, "Test Validate Clusters button clicked");
+            
+            if (_clusterManager != null)
+            {
+                _clusterManager.ValidateAllClusters();
+                
+                string stats = _clusterManager.GetStatistics();
+                Debug.Log($"Cluster Statistics:\n{stats}");
+                
+                UIService.ShowMessage("Cluster validation completed - check console", 3f);
+            }
+            else
+            {
+                GameLogger.LogWarning(ScreenName, "ClusterManager not available for validation");
+                UIService.ShowMessage("ClusterManager not available", 2f);
             }
         }
 
@@ -360,81 +595,11 @@ namespace WordPuzzle.UI.Screens
         }
         
         /// <summary>
-        /// НОВОЕ: Тестовое заполнение игрового поля
-        /// </summary>
-        private void OnTestFillFieldClicked()
-        {
-            GameLogger.LogInfo(ScreenName, "Test Fill Field button clicked");
-            
-            if (_gameField != null)
-            {
-                _gameField.FillWithTestData();
-                UIService.ShowMessage("Game field filled with test data", 2f);
-            }
-            else
-            {
-                GameLogger.LogWarning(ScreenName, "GameField is null, cannot fill with test data");
-                UIService.ShowMessage("GameField not available", 2f);
-            }
-        }
-        
-        /// <summary>
-        /// НОВОЕ: Тестовое создание кластеров
-        /// </summary>
-        private void OnTestCreateClustersClicked()
-        {
-            GameLogger.LogInfo(ScreenName, "Test Create Clusters button clicked");
-            
-            if (_clusterPanel != null)
-            {
-                _clusterPanel.CreateTestClusters();
-                UIService.ShowMessage("Test clusters created", 2f);
-            }
-            else
-            {
-                GameLogger.LogWarning(ScreenName, "ClusterPanel is null, cannot create test clusters");
-                UIService.ShowMessage("ClusterPanel not available", 2f);
-            }
-        }
-        
-        /// <summary>
-        /// НОВОЕ: Очистка всех элементов игрового поля
-        /// </summary>
-        private void OnTestClearAllClicked()
-        {
-            GameLogger.LogInfo(ScreenName, "Test Clear All button clicked");
-            
-            bool cleared = false;
-            
-            if (_gameField != null)
-            {
-                _gameField.ClearAllLetters();
-                cleared = true;
-            }
-            
-            if (_clusterPanel != null)
-            {
-                _clusterPanel.ClearAllClusters();
-                cleared = true;
-            }
-            
-            if (cleared)
-            {
-                UIService.ShowMessage("Game field and clusters cleared", 2f);
-            }
-            else
-            {
-                GameLogger.LogWarning(ScreenName, "No components available to clear");
-                UIService.ShowMessage("No components to clear", 2f);
-            }
-        }
-
-        /// <summary>
-        /// НОВОЕ: Получение отладочной информации о состоянии игрового поля
+        /// ОБНОВЛЕНО: Получение отладочной информации с ClusterManager
         /// </summary>
         public string GetGameFieldDebugInfo()
         {
-            var info = "=== Gameplay Screen Debug Info ===\n";
+            var info = "=== Gameplay Screen Debug Info (Enhanced) ===\n";
             info += $"Current Level: {_currentLevelId}\n";
             info += $"Level Data Loaded: {_currentLevelData != null}\n\n";
             
@@ -445,6 +610,15 @@ namespace WordPuzzle.UI.Screens
             else
             {
                 info += "GameField: null\n\n";
+            }
+            
+            if (_clusterManager != null)
+            {
+                info += $"ClusterManager:\n{_clusterManager.GetStatistics()}\n\n";
+            }
+            else
+            {
+                info += "ClusterManager: null\n\n";
             }
             
             if (_clusterPanel != null)
@@ -460,23 +634,33 @@ namespace WordPuzzle.UI.Screens
         }
         
         #if UNITY_EDITOR
-        [ContextMenu("Show GameField Debug Info")]
-        private void ShowGameFieldDebugInfo()
+        [ContextMenu("Show Enhanced Debug Info")]
+        private void ShowEnhancedDebugInfo()
         {
             Debug.Log(GetGameFieldDebugInfo());
         }
         
-        [ContextMenu("Test Setup All Components")]
-        private void TestSetupAllComponents()
+        [ContextMenu("Test ClusterManager Features")]
+        private void TestClusterManagerFeatures()
         {
-            SetupGameplayComponents();
-            if (_currentLevelData != null)
+            if (_clusterManager != null)
             {
-                SetupGameFieldWithLevelData(_currentLevelData);
+                Debug.Log("=== Testing ClusterManager Features ===");
+                
+                // Тест создания кластеров
+                _clusterManager.CreateTestLevel();
+                Debug.Log($"Test level created. Statistics:\n{_clusterManager.GetStatistics()}");
+                
+                // Тест валидации
+                _clusterManager.ValidateAllClusters();
+                
+                // Тест поиска
+                var foundClusters = _clusterManager.FindClustersByText("КЛ");
+                Debug.Log($"Found {foundClusters.Count} clusters with text 'КЛ'");
             }
             else
             {
-                GameLogger.LogWarning(ScreenName, "No level data loaded for component setup test");
+                Debug.LogWarning("ClusterManager is not available for testing");
             }
         }
         #endif
