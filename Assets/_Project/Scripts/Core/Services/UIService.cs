@@ -499,15 +499,16 @@ namespace WordPuzzle.Core.Services
         /// </summary>
         private GameObject CreateSimpleConfirmDialog()
         {
+            // Создаем полноэкранный контейнер для диалога
             var dialogObject = new GameObject("ConfirmDialog");
             dialogObject.transform.SetParent(_popupContainer, false);
             
-            // Центрирование
+            // Делаем контейнер полноэкранным для правильной работы ConfirmDialog компонента
             var rectTransform = dialogObject.AddComponent<RectTransform>();
-            rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
-            rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
-            rectTransform.sizeDelta = new Vector2(500, 300);
-            rectTransform.anchoredPosition = Vector2.zero;
+            rectTransform.anchorMin = Vector2.zero;
+            rectTransform.anchorMax = Vector2.one;
+            rectTransform.offsetMin = Vector2.zero;
+            rectTransform.offsetMax = Vector2.zero;
             
             return dialogObject;
         }

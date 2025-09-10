@@ -18,6 +18,7 @@ namespace WordPuzzle.UI.Components
         [SerializeField] private Button _confirmButton;
         [SerializeField] private Button _cancelButton;
         [SerializeField] private Image _backgroundImage;
+        [SerializeField] private Image _fullscreenBlocker; // Полноэкранный блокер для предотвращения взаимодействия с фоном
         [SerializeField] private CanvasGroup _canvasGroup;
 
         [Header("Animation Settings")]
@@ -70,28 +71,58 @@ namespace WordPuzzle.UI.Components
         /// </summary>
         private void CreateBasicElements()
         {
-            // Background
-            if (_backgroundImage == null)
+            // Fullscreen Blocker - создается первым и занимает весь экран
+            if (_fullscreenBlocker == null)
             {
-                _backgroundImage = gameObject.AddComponent<Image>();
-                _backgroundImage.color = new Color(0.2f, 0.2f, 0.2f, 0.95f);
+                var blockerObject = new GameObject("FullscreenBlocker");
+                blockerObject.transform.SetParent(transform, false);
 
-                // Настройка размера
-                var rect = GetComponent<RectTransform>();
-                if (rect == null)
-                {
-                    rect = gameObject.AddComponent<RectTransform>();
-                }
-                rect.sizeDelta = new Vector2(500, 300);
+                _fullscreenBlocker = blockerObject.AddComponent<Image>();
+                _fullscreenBlocker.color = new Color(0f, 0f, 0f, 0.5f); // Полупрозрачный черный фон
+                _fullscreenBlocker.raycastTarget = true; // Важно: блокирует клики
+
+                var blockerRect = blockerObject.GetComponent<RectTransform>();
+                // Растягиваем на весь экран
+                blockerRect.anchorMin = Vector2.zero;
+                blockerRect.anchorMax = Vector2.one;
+                blockerRect.offsetMin = Vector2.zero;
+                blockerRect.offsetMax = Vector2.zero;
                 
-                Debug.Log("[ConfirmDialog] Background image created");
+                // Перемещаем в самый низ иерархии, чтобы он был позади диалога
+                blockerObject.transform.SetAsFirstSibling();
+                
+                Debug.Log("[ConfirmDialog] Fullscreen blocker created");
             }
 
-            // Title
+            // Dialog Panel - контейнер для самого диалога
+            GameObject dialogPanel = null;
+            if (_backgroundImage == null)
+            {
+                dialogPanel = new GameObject("DialogPanel");
+                dialogPanel.transform.SetParent(transform, false);
+
+                _backgroundImage = dialogPanel.AddComponent<Image>();
+                _backgroundImage.color = new Color(0.2f, 0.2f, 0.2f, 0.95f);
+
+                var dialogRect = dialogPanel.GetComponent<RectTransform>();
+                dialogRect.sizeDelta = new Vector2(500, 300);
+                // Центрируем диалог
+                dialogRect.anchorMin = new Vector2(0.5f, 0.5f);
+                dialogRect.anchorMax = new Vector2(0.5f, 0.5f);
+                dialogRect.anchoredPosition = Vector2.zero;
+                
+                Debug.Log("[ConfirmDialog] Dialog panel created");
+            }
+            else
+            {
+                dialogPanel = _backgroundImage.gameObject;
+            }
+
+            // Title - привязываем к диалоговой панели
             if (_titleText == null)
             {
                 var titleObject = new GameObject("Title");
-                titleObject.transform.SetParent(transform, false);
+                titleObject.transform.SetParent(dialogPanel.transform, false);
 
                 _titleText = titleObject.AddComponent<TextMeshProUGUI>();
                 _titleText.fontSize = 28;
@@ -108,11 +139,11 @@ namespace WordPuzzle.UI.Components
                 Debug.Log("[ConfirmDialog] Title text created");
             }
 
-            // Message
+            // Message - привязываем к диалоговой панели
             if (_messageText == null)
             {
                 var messageObject = new GameObject("Message");
-                messageObject.transform.SetParent(transform, false);
+                messageObject.transform.SetParent(dialogPanel.transform, false);
 
                 _messageText = messageObject.AddComponent<TextMeshProUGUI>();
                 _messageText.fontSize = 20;
@@ -135,11 +166,14 @@ namespace WordPuzzle.UI.Components
         /// </summary>
         private void SetupButtons()
         {
-            // Confirm Button
+            // Получаем ссылку на диалоговую панель
+            var dialogPanel = _backgroundImage.gameObject;
+
+            // Confirm Button - привязываем к диалоговой панели
             if (_confirmButton == null)
             {
                 var confirmObject = new GameObject("ConfirmButton");
-                confirmObject.transform.SetParent(transform, false);
+                confirmObject.transform.SetParent(dialogPanel.transform, false);
 
                 _confirmButton = confirmObject.AddComponent<Button>();
                 var confirmImage = confirmObject.AddComponent<Image>();
@@ -169,11 +203,11 @@ namespace WordPuzzle.UI.Components
                 Debug.Log("[ConfirmDialog] Confirm button created");
             }
 
-            // Cancel Button
+            // Cancel Button - привязываем к диалоговой панели
             if (_cancelButton == null)
             {
                 var cancelObject = new GameObject("CancelButton");
-                cancelObject.transform.SetParent(transform, false);
+                cancelObject.transform.SetParent(dialogPanel.transform, false);
 
                 _cancelButton = cancelObject.AddComponent<Button>();
                 var cancelImage = cancelObject.AddComponent<Image>();
@@ -206,6 +240,19 @@ namespace WordPuzzle.UI.Components
             // События кнопок
             _confirmButton.onClick.AddListener(OnConfirmClicked);
             _cancelButton.onClick.AddListener(OnCancelClicked);
+
+            // Добавляем кнопку к полноэкранному блокеру для закрытия диалога при клике на фон
+            if (_fullscreenBlocker != null)
+            {
+                var blockerButton = _fullscreenBlocker.gameObject.GetComponent<Button>();
+                if (blockerButton == null)
+                {
+                    blockerButton = _fullscreenBlocker.gameObject.AddComponent<Button>();
+                }
+                blockerButton.onClick.AddListener(OnBackgroundClicked);
+                
+                Debug.Log("[ConfirmDialog] Background click handler added");
+            }
         }
 
         /// <summary>
@@ -281,6 +328,16 @@ namespace WordPuzzle.UI.Components
         }
 
         /// <summary>
+        /// Обработка клика по фону (закрытие диалога)
+        /// </summary>
+        private void OnBackgroundClicked()
+        {
+            Debug.Log("[ConfirmDialog] Background clicked - closing dialog");
+            _onCancel?.Invoke(); // Трактуем как отмену
+            Hide();
+        }
+
+        /// <summary>
         /// Очистка при уничтожении
         /// </summary>
         private void OnDestroy()
@@ -292,6 +349,13 @@ namespace WordPuzzle.UI.Components
 
             if (_cancelButton != null)
                 _cancelButton.onClick.RemoveListener(OnCancelClicked);
+
+            if (_fullscreenBlocker != null)
+            {
+                var blockerButton = _fullscreenBlocker.gameObject.GetComponent<Button>();
+                if (blockerButton != null)
+                    blockerButton.onClick.RemoveListener(OnBackgroundClicked);
+            }
         }
         
         /// <summary>
