@@ -17,12 +17,10 @@ namespace WordPuzzle.UI.Screens
         [SerializeField] private Button _playButton;
         [SerializeField] private TextMeshProUGUI _levelCounterText;
         [SerializeField] private TextMeshProUGUI _titleText;
-        [SerializeField] private Button _resetProgressButton; // НОВОЕ: для тестирования
         
         [Header("Settings")]
         [SerializeField] private string _titleTextContent = "Word Puzzle";
         [SerializeField] private string _levelCounterFormat = "Levels Completed: {0}";
-        [SerializeField] private bool _showResetButton = false; // НОВОЕ: для отладки
         
         protected override string ScreenName => "MainMenu";
         
@@ -31,7 +29,6 @@ namespace WordPuzzle.UI.Screens
             GameLogger.LogInfo(ScreenName, "Setting up Main Menu UI elements...");
             
             SetupTitle();
-            SetupResetButton(); // НОВОЕ
             UpdateLevelCounter();
             SetupPlayButton();
             
@@ -48,12 +45,6 @@ namespace WordPuzzle.UI.Screens
             {
                 GameLogger.LogWarning(ScreenName, "Play button is not assigned!");
             }
-
-            // НОВОЕ: кнопка сброса прогресса для тестирования
-            if (_resetProgressButton != null)
-            {
-                _resetProgressButton.onClick.AddListener(OnResetProgressClicked);
-            }
         }
         
         protected override void UnsubscribeFromUIEvents()
@@ -61,11 +52,6 @@ namespace WordPuzzle.UI.Screens
             if (_playButton != null)
             {
                 _playButton.onClick.RemoveListener(OnPlayButtonClicked);
-            }
-
-            if (_resetProgressButton != null)
-            {
-                _resetProgressButton.onClick.RemoveListener(OnResetProgressClicked);
             }
         }
         
@@ -79,23 +65,6 @@ namespace WordPuzzle.UI.Screens
             else
             {
                 GameLogger.LogWarning(ScreenName, "Title text component is not assigned!");
-            }
-        }
-
-        /// <summary>
-        /// НОВОЕ: Настройка кнопки сброса прогресса для тестирования
-        /// </summary>
-        private void SetupResetButton()
-        {
-            if (_resetProgressButton != null)
-            {
-                _resetProgressButton.gameObject.SetActive(_showResetButton);
-                
-                var buttonText = _resetProgressButton.GetComponentInChildren<TextMeshProUGUI>();
-                if (buttonText != null)
-                {
-                    buttonText.text = "Reset Progress";
-                }
             }
         }
         
