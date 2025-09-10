@@ -8,7 +8,7 @@ namespace WordPuzzle.UI.Components
 {
     /// <summary>
     /// Компонент всплывающего сообщения
-    /// ИСПРАВЛЕНО: правильный порядок инициализации CanvasGroup
+    /// ИСПРАВЛЕНО: правильное позиционирование для мобильных устройств
     /// </summary>
     public class MessagePopup : MonoBehaviour
     {
@@ -22,6 +22,10 @@ namespace WordPuzzle.UI.Components
         [SerializeField] private float _hideDuration = 0.3f;
         [SerializeField] private Ease _showEase = Ease.OutBack;
         [SerializeField] private Ease _hideEase = Ease.InQuad;
+        
+        [Header("Positioning Settings")]
+        [SerializeField] private float _topMargin = 100f; // Отступ сверху
+        [SerializeField] private Vector2 _messageSize = new Vector2(600f, 120f); // Размер сообщения
 
         private Action _onHideComplete;
 
@@ -34,11 +38,11 @@ namespace WordPuzzle.UI.Components
         }
 
         /// <summary>
-        /// ИСПРАВЛЕНО: Настройка компонентов с правильным порядком
+        /// Настройка компонентов с правильным порядком
         /// </summary>
         private void SetupComponents()
         {
-            // ИСПРАВЛЕНИЕ: Сначала создаем/проверяем CanvasGroup ПЕРЕД его использованием
+            // Сначала создаем/проверяем CanvasGroup ПЕРЕД его использованием
             if (_canvasGroup == null)
             {
                 _canvasGroup = GetComponent<CanvasGroup>();
@@ -51,7 +55,7 @@ namespace WordPuzzle.UI.Components
 
             CreateBasicElements();
 
-            // ИСПРАВЛЕНИЕ: Теперь безопасно устанавливаем параметры, так как CanvasGroup точно существует
+            // Теперь безопасно устанавливаем параметры
             _canvasGroup.alpha = 0f;
             transform.localScale = Vector3.zero;
             gameObject.SetActive(false);
@@ -60,35 +64,47 @@ namespace WordPuzzle.UI.Components
         }
 
         /// <summary>
-        /// Создание базовых элементов
+        /// Создание базовых элементов с правильным позиционированием для мобильных
         /// </summary>
         private void CreateBasicElements()
         {
+            // Настройка основного RectTransform для центрированного позиционирования
+            var mainRect = GetComponent<RectTransform>();
+            if (mainRect == null)
+            {
+                mainRect = gameObject.AddComponent<RectTransform>();
+            }
+            
+            // ИСПРАВЛЕНО: Позиционирование по центру вверху экрана, безопасно для мобильных
+            mainRect.anchorMin = new Vector2(0.5f, 1f);  // Центр верха
+            mainRect.anchorMax = new Vector2(0.5f, 1f);  // Центр верха
+            mainRect.sizeDelta = _messageSize;           // Фиксированный размер
+            mainRect.anchoredPosition = new Vector2(0, -_topMargin); // Отступ сверху
+            
+            // Background Image
             if (_backgroundImage == null)
             {
                 _backgroundImage = gameObject.AddComponent<Image>();
-                _backgroundImage.color = new Color(0.1f, 0.1f, 0.1f, 0.9f);
+                _backgroundImage.color = new Color(0.1f, 0.1f, 0.1f, 0.95f); // Чуть более непрозрачный
                 
-                // Настройка размера для сообщений
-                var rect = GetComponent<RectTransform>();
-                if (rect == null)
-                {
-                    rect = gameObject.AddComponent<RectTransform>();
-                }
+                // Добавляем закругленные углы если возможно
+                _backgroundImage.type = Image.Type.Sliced;
                 
-                Debug.Log("[MessagePopup] Background image created");
+                Debug.Log("[MessagePopup] Background image created with mobile-friendly positioning");
             }
 
+            // Message Text
             if (_messageText == null)
             {
                 var textObject = new GameObject("MessageText");
                 textObject.transform.SetParent(transform, false);
 
                 _messageText = textObject.AddComponent<TextMeshProUGUI>();
-                _messageText.fontSize = 24;
+                _messageText.fontSize = 20; // Немного меньше для мобильных
                 _messageText.color = Color.white;
                 _messageText.alignment = TextAlignmentOptions.Center;
-                _messageText.margin = new Vector4(20, 10, 20, 10);
+                _messageText.textWrappingMode = TextWrappingModes.Normal;
+                _messageText.margin = new Vector4(15, 10, 15, 10); // Отступы для читаемости
 
                 var textRect = textObject.GetComponent<RectTransform>();
                 textRect.anchorMin = Vector2.zero;
@@ -96,7 +112,7 @@ namespace WordPuzzle.UI.Components
                 textRect.offsetMin = Vector2.zero;
                 textRect.offsetMax = Vector2.zero;
                 
-                Debug.Log("[MessagePopup] Message text created");
+                Debug.Log("[MessagePopup] Message text created with mobile-friendly settings");
             }
         }
 
@@ -117,13 +133,20 @@ namespace WordPuzzle.UI.Components
             gameObject.SetActive(true);
             _messageText.text = message;
 
+            // Анимация появления с движением сверху вниз
+            var startPosition = transform.localPosition;
+            var targetPosition = startPosition;
+            startPosition.y += 50f; // Начинаем чуть выше
+            transform.localPosition = startPosition;
+
             var sequence = DOTween.Sequence();
             sequence.Append(_canvasGroup.DOFade(1f, _showDuration).SetEase(_showEase));
             sequence.Join(transform.DOScale(Vector3.one, _showDuration).SetEase(_showEase));
+            sequence.Join(transform.DOLocalMove(targetPosition, _showDuration).SetEase(_showEase));
             sequence.AppendInterval(duration);
             sequence.AppendCallback(Hide);
             
-            Debug.Log($"[MessagePopup] Message shown: {message} (duration: {duration}s)");
+            Debug.Log($"[MessagePopup] Message shown at mobile-safe position: {message} (duration: {duration}s)");
         }
 
         /// <summary>
@@ -143,6 +166,8 @@ namespace WordPuzzle.UI.Components
             var sequence = DOTween.Sequence();
             sequence.Append(_canvasGroup.DOFade(0f, _hideDuration).SetEase(_hideEase));
             sequence.Join(transform.DOScale(Vector3.zero, _hideDuration).SetEase(_hideEase));
+            // Анимация движения вверх при исчезновении
+            sequence.Join(transform.DOLocalMoveY(transform.localPosition.y + 30f, _hideDuration).SetEase(_hideEase));
             sequence.OnComplete(() =>
             {
                 gameObject.SetActive(false);
