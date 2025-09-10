@@ -45,6 +45,9 @@ namespace WordPuzzle.UI.Screens
         {
             GameLogger.LogInfo(ScreenName, "Setting up Main Menu with modular components...");
             
+            // Диагностика сервисов
+            GameLogger.LogInfo(ScreenName, $"Services status: UIService={UIService != null}, ProgressService={ProgressService != null}, LevelService={LevelService != null}");
+            
             SetupTitle();
             SetupComponents();
             SetupDebugButton();
@@ -348,15 +351,37 @@ namespace WordPuzzle.UI.Screens
         {
             GameLogger.LogInfo(ScreenName, "Reset progress button clicked (debug)");
             
-            UIService?.ShowConfirmDialog(
+            // Получаем сервисы через безопасные методы
+            var uiService = GetUIService();
+            var progressService = GetProgressService();
+            
+            // Проверяем доступность всех сервисов
+            if (uiService == null)
+            {
+                GameLogger.LogError(ScreenName, "UIService is not available! Cannot show confirmation dialog.");
+                return;
+            }
+            
+            if (progressService == null)
+            {
+                GameLogger.LogError(ScreenName, "ProgressService is not available! Cannot reset progress.");
+                uiService.ShowMessage("ProgressService not available", 3f);
+                return;
+            }
+            
+            GameLogger.LogInfo(ScreenName, "Services are available, showing confirmation dialog...");
+            
+            uiService.ShowConfirmDialog(
                 "Reset Progress (Debug)",
                 "Are you sure you want to reset all progress? This cannot be undone.\n\n(This is a debug feature)",
                 onConfirm: async () =>
                 {
                     try
                     {
+                        GameLogger.LogInfo(ScreenName, "User confirmed progress reset, executing...");
+                        
                         // Сбрасываем прогресс
-                        ProgressService.ResetProgress();
+                        progressService.ResetProgress();
                         
                         // Сбрасываем анимации компонентов для демонстрации
                         _levelCounter?.ResetAnimation();
@@ -364,13 +389,13 @@ namespace WordPuzzle.UI.Screens
                         // Обновляем компоненты
                         await RefreshProgressAndUpdateComponents();
                         
-                        UIService?.ShowMessage("Progress reset successfully! (Debug)", 2f);
+                        uiService.ShowMessage("Progress reset successfully! (Debug)", 2f);
                         GameLogger.LogInfo(ScreenName, "Debug progress reset completed");
                     }
                     catch (System.Exception ex)
                     {
                         GameLogger.LogException(ScreenName, ex);
-                        UIService?.ShowMessage("Failed to reset progress", 3f);
+                        uiService.ShowMessage("Failed to reset progress", 3f);
                     }
                 },
                 onCancel: () =>
@@ -439,6 +464,47 @@ namespace WordPuzzle.UI.Screens
         private void ShowDebugInfo()
         {
             Debug.Log(GetDebugInfo());
+        }
+
+        [ContextMenu("Test UIService")]
+        private void TestUIService()
+        {
+            GameLogger.LogInfo(ScreenName, $"=== UIService Test ===");
+            GameLogger.LogInfo(ScreenName, $"UIService (direct) is null: {UIService == null}");
+            
+            var uiService = GetUIService();
+            GameLogger.LogInfo(ScreenName, $"UIService (via GetUIService) is null: {uiService == null}");
+            
+            if (uiService != null)
+            {
+                GameLogger.LogInfo(ScreenName, $"UIService type: {uiService.GetType().Name}");
+                GameLogger.LogInfo(ScreenName, $"UIService initialized: {uiService.IsInitialized}");
+                
+                // Тест простого сообщения
+                uiService.ShowMessage("Test message from MainMenuScreen", 2f);
+                
+                // Тест диалога подтверждения 
+                uiService.ShowConfirmDialog(
+                    "Test Dialog",
+                    "This is a test confirmation dialog",
+                    onConfirm: () => GameLogger.LogInfo(ScreenName, "Test dialog confirmed"),
+                    onCancel: () => GameLogger.LogInfo(ScreenName, "Test dialog cancelled")
+                );
+            }
+            else
+            {
+                GameLogger.LogError(ScreenName, "UIService is not available through DI or fallback!");
+            }
+            
+            GameLogger.LogInfo(ScreenName, $"ProgressService is null: {ProgressService == null}");
+            GameLogger.LogInfo(ScreenName, $"LevelService is null: {LevelService == null}");
+            GameLogger.LogInfo(ScreenName, $"SceneService is null: {SceneService == null}");
+        }
+        
+        [ContextMenu("Show ServiceLocator Info")]
+        private void ShowServiceLocatorInfo()
+        {
+            GameLogger.LogInfo(ScreenName, WordPuzzle.Core.Utils.ServiceLocator.GetServicesInfo());
         }
         #endif
         
