@@ -153,6 +153,8 @@ MonoBehaviour:
   autoRun: 1
   autoInjectGameObjects: []
   _enableDebugLogging: 1
+  _uiServicePrefab: {fileID: 0}
+  _createUIServiceDynamically: 1
 --- !u!4 &306715171
 Transform:
   m_ObjectHideFlags: 0

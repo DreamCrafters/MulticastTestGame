@@ -10,12 +10,16 @@ namespace WordPuzzle.Core.Architecture
     /// <summary>
     /// Основной LifetimeScope приложения
     /// Регистрирует все глобальные сервисы и настраивает DI контейнер
-    /// ИСПРАВЛЕНО: добавлен import для ProgressService
+    /// ОБНОВЛЕНО: добавлена регистрация реального UIService
     /// </summary>
     public class GameLifetimeScope : LifetimeScope
     {
         [Header("Debug Settings")]
         [SerializeField] private bool _enableDebugLogging = true;
+        
+        [Header("UI Service Settings")]
+        [SerializeField] private GameObject _uiServicePrefab;
+        [SerializeField] private bool _createUIServiceDynamically = true;
 
         /// <summary>
         /// Настройка контейнера DI
@@ -42,7 +46,7 @@ namespace WordPuzzle.Core.Architecture
 
         /// <summary>
         /// Регистрация основных сервисов приложения
-        /// ИСПРАВЛЕНО: правильная регистрация ProgressService
+        /// ОБНОВЛЕНО: добавлена регистрация реального UIService
         /// </summary>
         private void RegisterCoreServices(IContainerBuilder builder)
         {
@@ -51,20 +55,61 @@ namespace WordPuzzle.Core.Architecture
                 GameLogger.LogInfo("GameLifetimeScope", "Registering core services...");
             }
 
-            // Регистрация реальных сервисов
+            // Регистрация основных сервисов
             builder.Register<ISceneService, SceneService>(Lifetime.Singleton);
             builder.Register<UINavigationService>(Lifetime.Singleton);
             builder.Register<ILevelService, LevelService>(Lifetime.Singleton);
-            
-            // ИСПРАВЛЕНО: правильная регистрация ProgressService из нужного namespace
             builder.Register<IProgressService, ProgressService>(Lifetime.Singleton);
-
-            // Регистрация оставшихся моков
-            builder.Register<IUIService, MockUIService>(Lifetime.Singleton);
+            
+            // НОВОЕ: Регистрация реального UIService
+            RegisterUIService(builder);
 
             if (_enableDebugLogging)
             {
                 GameLogger.LogInfo("GameLifetimeScope", "Core services registered");
+            }
+        }
+        
+        /// <summary>
+        /// НОВОЕ: Регистрация UIService с созданием экземпляра
+        /// </summary>
+        private void RegisterUIService(IContainerBuilder builder)
+        {
+            UIService uiServiceInstance = null;
+            
+            // Пытаемся создать из префаба
+            if (_uiServicePrefab != null)
+            {
+                var uiServiceObject = Instantiate(_uiServicePrefab);
+                DontDestroyOnLoad(uiServiceObject);
+                
+                uiServiceInstance = uiServiceObject.GetComponent<UIService>();
+                if (uiServiceInstance == null)
+                {
+                    uiServiceInstance = uiServiceObject.AddComponent<UIService>();
+                }
+                
+                GameLogger.LogInfo("GameLifetimeScope", "UIService created from prefab");
+            }
+            // Создаем динамически
+            else if (_createUIServiceDynamically)
+            {
+                var uiServiceObject = new GameObject("UIService");
+                DontDestroyOnLoad(uiServiceObject);
+                uiServiceInstance = uiServiceObject.AddComponent<UIService>();
+                
+                GameLogger.LogInfo("GameLifetimeScope", "UIService created dynamically");
+            }
+            
+            // Регистрируем экземпляр
+            if (uiServiceInstance != null)
+            {
+                builder.RegisterInstance<IUIService>(uiServiceInstance);
+                GameLogger.LogInfo("GameLifetimeScope", "UIService registered successfully");
+            }
+            else
+            {
+                GameLogger.LogWarning("GameLifetimeScope", "UIService registered failed - no instance created");
             }
         }
 
