@@ -1031,6 +1031,8 @@ MonoBehaviour:
     TypeName: WordPuzzle.Core.Architecture.GameLifetimeScope
   autoRun: 1
   autoInjectGameObjects:
+  - {fileID: 261036442}
+  - {fileID: 1501921038}
   - {fileID: 203510725}
 --- !u!4 &1125870447
 Transform:

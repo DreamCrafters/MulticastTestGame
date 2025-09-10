@@ -4,6 +4,7 @@ using VContainer.Unity;
 using WordPuzzle.Core.Services;
 using WordPuzzle.UI.Navigation;
 using WordPuzzle.Data.Persistence;
+using WordPuzzle.UI.Screens;
 
 namespace WordPuzzle.Core.Architecture
 {

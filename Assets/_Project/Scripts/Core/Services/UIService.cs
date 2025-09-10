@@ -479,19 +479,19 @@ namespace WordPuzzle.Core.Services
 
         /// <summary>
         /// Создание простого сообщения (если нет префаба)
-        /// ИСПРАВЛЕНО: мобильно-безопасное позиционирование
         /// </summary>
         private GameObject CreateSimpleMessage()
         {
             var messageObject = new GameObject("Message");
             messageObject.transform.SetParent(_popupContainer, false);
 
-            // ИСПРАВЛЕНО: Позиционирование по центру верха экрана для мобильных
+            // Позиционирование теперь настраивается в MessagePopup.SetupMobileSafePositioning()
+            // Базовая настройка для совместимости
             var rectTransform = messageObject.AddComponent<RectTransform>();
-            rectTransform.anchorMin = new Vector2(0.5f, 1f);  // Центр верха
-            rectTransform.anchorMax = new Vector2(0.5f, 1f);  // Центр верха
-            rectTransform.sizeDelta = new Vector2(600f, 120f); // Размер сообщения
-            rectTransform.anchoredPosition = new Vector2(0, -100f); // Отступ сверху
+            rectTransform.anchorMin = new Vector2(1, 1);
+            rectTransform.anchorMax = new Vector2(1, 1);
+            rectTransform.sizeDelta = new Vector2(400, 80);
+            rectTransform.anchoredPosition = new Vector2(-120, -80);
 
             return messageObject;
         }
@@ -502,27 +502,17 @@ namespace WordPuzzle.Core.Services
         /// </summary>
         private GameObject CreateSimpleConfirmDialog()
         {
+            // Создаем полноэкранный контейнер для диалога
             var dialogObject = new GameObject("ConfirmDialog");
             dialogObject.transform.SetParent(_popupContainer, false);
+       
+            // Делаем контейнер полноэкранным для правильной работы ConfirmDialog компонента
 
-            // Полноэкранный размер для блокировки
             var rectTransform = dialogObject.AddComponent<RectTransform>();
             rectTransform.anchorMin = Vector2.zero;
             rectTransform.anchorMax = Vector2.one;
             rectTransform.offsetMin = Vector2.zero;
-            rectTransform.offsetMax = Vector2.zero;
-
-            // Добавляем блокирующий фон
-            var blockingBackground = dialogObject.AddComponent<Image>();
-            blockingBackground.color = new Color(0f, 0f, 0f, 0.7f);
-
-            // Добавляем кнопку для блокировки кликов
-            var blockingButton = dialogObject.AddComponent<Button>();
-            blockingButton.transition = Selectable.Transition.None;
-            blockingButton.onClick.AddListener(() =>
-            {
-                Debug.Log("[UIService] Background click blocked in simple confirm dialog");
-            });
+            rectTransform.offsetMax = Vector2.zero;         
 
             return dialogObject;
         }

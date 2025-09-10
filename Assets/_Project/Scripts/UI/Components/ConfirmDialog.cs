@@ -18,6 +18,7 @@ namespace WordPuzzle.UI.Components
         [SerializeField] private Button _confirmButton;
         [SerializeField] private Button _cancelButton;
         [SerializeField] private Image _backgroundImage;
+        [SerializeField] private Image _fullscreenBlocker; // Полноэкранный блокер для предотвращения взаимодействия с фоном
         [SerializeField] private CanvasGroup _canvasGroup;
 
         [Header("Animation Settings")]
@@ -100,36 +101,85 @@ namespace WordPuzzle.UI.Components
         /// </summary>
         private void CreateBasicElements()
         {
-            Debug.Log("[ConfirmDialog] Creating basic elements...");
-
-            // Background - используем существующий Image или создаем новый
-            if (_backgroundImage == null)
+            // Fullscreen Blocker - создается первым и занимает весь экран
+            if (_fullscreenBlocker == null)
             {
-                _backgroundImage = GetComponent<Image>();
-                if (_backgroundImage == null)
-                {
-                    _backgroundImage = gameObject.AddComponent<Image>();
-                }
-                _backgroundImage.color = new Color(0.2f, 0.2f, 0.2f, 0.95f);
+                var blockerObject = new GameObject("FullscreenBlocker");
+                blockerObject.transform.SetParent(transform, false);
 
-                // Настройка размера
-                var rect = GetComponent<RectTransform>();
-                rect.sizeDelta = new Vector2(500, 300);
+                _fullscreenBlocker = blockerObject.AddComponent<Image>();
+                _fullscreenBlocker.color = new Color(0f, 0f, 0f, 0.5f); // Полупрозрачный черный фон
+                _fullscreenBlocker.raycastTarget = true; // Важно: блокирует клики
 
-                Debug.Log("[ConfirmDialog] Background image created");
+                var blockerRect = blockerObject.GetComponent<RectTransform>();
+                // Растягиваем на весь экран
+                blockerRect.anchorMin = Vector2.zero;
+                blockerRect.anchorMax = Vector2.one;
+                blockerRect.offsetMin = Vector2.zero;
+                blockerRect.offsetMax = Vector2.zero;
+                
+                // Перемещаем в самый низ иерархии, чтобы он был позади диалога
+                blockerObject.transform.SetAsFirstSibling();
+                
+                Debug.Log("[ConfirmDialog] Fullscreen blocker created");
             }
 
-            // Title Text
+            // Dialog Panel - контейнер для самого диалога
+            GameObject dialogPanel = null;
+            if (_backgroundImage == null)
+            {
+                dialogPanel = new GameObject("DialogPanel");
+                dialogPanel.transform.SetParent(transform, false);
+
+                _backgroundImage = dialogPanel.AddComponent<Image>();
+                _backgroundImage.color = new Color(0.2f, 0.2f, 0.2f, 0.95f);
+
+                var dialogRect = dialogPanel.GetComponent<RectTransform>();
+                dialogRect.sizeDelta = new Vector2(500, 300);
+                // Центрируем диалог
+                dialogRect.anchorMin = new Vector2(0.5f, 0.5f);
+                dialogRect.anchorMax = new Vector2(0.5f, 0.5f);
+                dialogRect.anchoredPosition = Vector2.zero;
+                
+                Debug.Log("[ConfirmDialog] Dialog panel created");
+            }
+            else
+            {
+                dialogPanel = _backgroundImage.gameObject;
+            }
+
+            // Title - привязываем к диалоговой панели
             if (_titleText == null)
             {
-                _titleText = CreateTextElement("Title", new Vector2(0f, 0.7f), new Vector2(1f, 0.9f), 28, FontStyles.Bold);
+                var titleObject = new GameObject("Title");
+                titleObject.transform.SetParent(dialogPanel.transform, false);
+
+                _titleText = titleObject.AddComponent<TextMeshProUGUI>();
+                _titleText.fontSize = 28;
+                _titleText.color = Color.white;
+                _titleText.alignment = TextAlignmentOptions.Center;
+                _titleText.fontStyle = FontStyles.Bold;
+
+                var titleRect = titleObject.GetComponent<RectTransform>();
+                titleRect.anchorMin = new Vector2(0f, 0.7f);
+                titleRect.anchorMax = new Vector2(1f, 0.9f);
+                titleRect.offsetMin = new Vector2(20, 0);
+                titleRect.offsetMax = new Vector2(-20, 0);
+                
                 Debug.Log("[ConfirmDialog] Title text created");
             }
 
-            // Message Text  
+            // Message - привязываем к диалоговой панели
             if (_messageText == null)
             {
-                _messageText = CreateTextElement("Message", new Vector2(0f, 0.3f), new Vector2(1f, 0.7f), 20, FontStyles.Normal);
+                var messageObject = new GameObject("Message");
+                messageObject.transform.SetParent(dialogPanel.transform, false);
+
+                _messageText = messageObject.AddComponent<TextMeshProUGUI>();
+                _messageText.fontSize = 20;
+                _messageText.color = Color.white;
+                _messageText.alignment = TextAlignmentOptions.Center;
+
                 _messageText.textWrappingMode = TextWrappingModes.Normal;
                 Debug.Log("[ConfirmDialog] Message text created");
             }
@@ -169,121 +219,93 @@ namespace WordPuzzle.UI.Components
         /// </summary>
         private void SetupButtons()
         {
-            Debug.Log("[ConfirmDialog] Setting up buttons...");
+            // Получаем ссылку на диалоговую панель
+            var dialogPanel = _backgroundImage.gameObject;
 
-            try
-            {
-                // Confirm Button
-                if (_confirmButton == null)
-                {
-                    _confirmButton = CreateButton("ConfirmButton", new Vector2(0.6f, 0.1f), new Vector2(0.9f, 0.25f),
-                                                  new Color(0.2f, 0.7f, 0.3f, 1f), "OK");
-                    Debug.Log("[ConfirmDialog] Confirm button created");
-                }
-
-                // Cancel Button
-                if (_cancelButton == null)
-                {
-                    _cancelButton = CreateButton("CancelButton", new Vector2(0.1f, 0.1f), new Vector2(0.4f, 0.25f),
-                                                 new Color(0.6f, 0.3f, 0.3f, 1f), "Cancel");
-                    Debug.Log("[ConfirmDialog] Cancel button created");
-                }
-
-                // Подписываемся на события
-                _confirmButton.onClick.AddListener(OnConfirmClicked);
-                _cancelButton.onClick.AddListener(OnCancelClicked);
-
-                Debug.Log("[ConfirmDialog] Button setup completed");
-            }
-            catch (System.Exception ex)
-            {
-                Debug.LogError($"[ConfirmDialog] Error setting up buttons: {ex.Message}");
-                Debug.LogException(ex);
-            }
-        }
-
-        /// <summary>
-        /// НОВОЕ: Безопасное создание кнопок
-        /// </summary>
-        private Button CreateButton(string name, Vector2 anchorMin, Vector2 anchorMax, Color color, string text)
-        {
-            // Создаем GameObject для кнопки
-            var buttonObject = new GameObject(name);
-            buttonObject.transform.SetParent(transform, false);
-
-            // Добавляем RectTransform
-            var rectTransform = buttonObject.AddComponent<RectTransform>();
-            rectTransform.anchorMin = anchorMin;
-            rectTransform.anchorMax = anchorMax;
-            rectTransform.offsetMin = Vector2.zero;
-            rectTransform.offsetMax = Vector2.zero;
-
-            // Добавляем Image и Button
-            var image = buttonObject.AddComponent<Image>();
-            image.color = color;
-            var button = buttonObject.AddComponent<Button>();
-
-            // Создаем текст кнопки
-            var textObject = new GameObject("Text");
-            textObject.transform.SetParent(buttonObject.transform, false);
-
-            var textRect = textObject.AddComponent<RectTransform>();
-            textRect.anchorMin = Vector2.zero;
-            textRect.anchorMax = Vector2.one;
-            textRect.offsetMin = Vector2.zero;
-            textRect.offsetMax = Vector2.zero;
-
-            var buttonText = textObject.AddComponent<TextMeshProUGUI>();
-            buttonText.text = text;
-            buttonText.fontSize = 18;
-            buttonText.color = Color.white;
-            buttonText.alignment = TextAlignmentOptions.Center;
-
-            return button;
-        }
-
-        /// <summary>
-        /// НОВОЕ: Создание минимального диалога в случае критической ошибки
-        /// </summary>
-        private void CreateFallbackDialog()
-        {
-            Debug.Log("[ConfirmDialog] Creating fallback dialog...");
-
-            // Минимальный CanvasGroup
-            if (_canvasGroup == null)
-            {
-                _canvasGroup = gameObject.AddComponent<CanvasGroup>();
-            }
-
-            // Минимальный фон
-            if (_backgroundImage == null)
-            {
-                _backgroundImage = gameObject.AddComponent<Image>();
-                _backgroundImage.color = new Color(0.2f, 0.2f, 0.2f, 0.95f);
-            }
-
-            // Минимальные кнопки
+            // Confirm Button - привязываем к диалоговой панели
             if (_confirmButton == null)
             {
-                var confirmObj = new GameObject("FallbackConfirm");
-                confirmObj.transform.SetParent(transform, false);
-                confirmObj.AddComponent<RectTransform>();
-                _confirmButton = confirmObj.AddComponent<Button>();
-                confirmObj.AddComponent<Image>().color = Color.green;
-                _confirmButton.onClick.AddListener(() => { Hide(); _onConfirm?.Invoke(); });
+                var confirmObject = new GameObject("ConfirmButton");
+                confirmObject.transform.SetParent(dialogPanel.transform, false);
+
+                _confirmButton = confirmObject.AddComponent<Button>();
+                var confirmImage = confirmObject.AddComponent<Image>();
+                confirmImage.color = new Color(0.2f, 0.7f, 0.3f, 1f);
+
+                var confirmRect = confirmObject.GetComponent<RectTransform>();
+                confirmRect.anchorMin = new Vector2(0.6f, 0.1f);
+                confirmRect.anchorMax = new Vector2(0.9f, 0.25f);
+                confirmRect.offsetMin = Vector2.zero;
+                confirmRect.offsetMax = Vector2.zero;
+
+                // Текст кнопки
+                var confirmTextObj = new GameObject("Text");
+                confirmTextObj.transform.SetParent(confirmObject.transform, false);
+                var confirmText = confirmTextObj.AddComponent<TextMeshProUGUI>();
+                confirmText.text = "OK";
+                confirmText.fontSize = 18;
+                confirmText.color = Color.white;
+                confirmText.alignment = TextAlignmentOptions.Center;
+
+                var confirmTextRect = confirmTextObj.GetComponent<RectTransform>();
+                confirmTextRect.anchorMin = Vector2.zero;
+                confirmTextRect.anchorMax = Vector2.one;
+                confirmTextRect.offsetMin = Vector2.zero;
+                confirmTextRect.offsetMax = Vector2.zero;
+                
+                Debug.Log("[ConfirmDialog] Confirm button created");
             }
 
+            // Cancel Button - привязываем к диалоговой панели
             if (_cancelButton == null)
             {
-                var cancelObj = new GameObject("FallbackCancel");
-                cancelObj.transform.SetParent(transform, false);
-                cancelObj.AddComponent<RectTransform>();
-                _cancelButton = cancelObj.AddComponent<Button>();
-                cancelObj.AddComponent<Image>().color = Color.red;
-                _cancelButton.onClick.AddListener(() => { Hide(); _onCancel?.Invoke(); });
+                var cancelObject = new GameObject("CancelButton");
+                cancelObject.transform.SetParent(dialogPanel.transform, false);
+
+                _cancelButton = cancelObject.AddComponent<Button>();
+                var cancelImage = cancelObject.AddComponent<Image>();
+                cancelImage.color = new Color(0.6f, 0.3f, 0.3f, 1f);
+
+                var cancelRect = cancelObject.GetComponent<RectTransform>();
+                cancelRect.anchorMin = new Vector2(0.1f, 0.1f);
+                cancelRect.anchorMax = new Vector2(0.4f, 0.25f);
+                cancelRect.offsetMin = Vector2.zero;
+                cancelRect.offsetMax = Vector2.zero;
+
+                // Текст кнопки
+                var cancelTextObj = new GameObject("Text");
+                cancelTextObj.transform.SetParent(cancelObject.transform, false);
+                var cancelText = cancelTextObj.AddComponent<TextMeshProUGUI>();
+                cancelText.text = "Cancel";
+                cancelText.fontSize = 18;
+                cancelText.color = Color.white;
+                cancelText.alignment = TextAlignmentOptions.Center;
+
+                var cancelTextRect = cancelTextObj.GetComponent<RectTransform>();
+                cancelTextRect.anchorMin = Vector2.zero;
+                cancelTextRect.anchorMax = Vector2.one;
+                cancelTextRect.offsetMin = Vector2.zero;
+                cancelTextRect.offsetMax = Vector2.zero;
+                
+                Debug.Log("[ConfirmDialog] Cancel button created");
             }
 
-            Debug.Log("[ConfirmDialog] Fallback dialog created");
+            // События кнопок
+            _confirmButton.onClick.AddListener(OnConfirmClicked);
+            _cancelButton.onClick.AddListener(OnCancelClicked);
+
+            // Добавляем кнопку к полноэкранному блокеру для закрытия диалога при клике на фон
+            if (_fullscreenBlocker != null)
+            {
+                var blockerButton = _fullscreenBlocker.gameObject.GetComponent<Button>();
+                if (blockerButton == null)
+                {
+                    blockerButton = _fullscreenBlocker.gameObject.AddComponent<Button>();
+                }
+                blockerButton.onClick.AddListener(OnBackgroundClicked);
+                
+                Debug.Log("[ConfirmDialog] Background click handler added");
+            }
         }
 
         /// <summary>
@@ -373,6 +395,16 @@ namespace WordPuzzle.UI.Components
         }
 
         /// <summary>
+        /// Обработка клика по фону (закрытие диалога)
+        /// </summary>
+        private void OnBackgroundClicked()
+        {
+            Debug.Log("[ConfirmDialog] Background clicked - closing dialog");
+            _onCancel?.Invoke(); // Трактуем как отмену
+            Hide();
+        }
+
+        /// <summary>
         /// Очистка при уничтожении
         /// </summary>
         private void OnDestroy()
@@ -384,6 +416,13 @@ namespace WordPuzzle.UI.Components
 
             if (_cancelButton != null)
                 _cancelButton.onClick.RemoveListener(OnCancelClicked);
+
+            if (_fullscreenBlocker != null)
+            {
+                var blockerButton = _fullscreenBlocker.gameObject.GetComponent<Button>();
+                if (blockerButton != null)
+                    blockerButton.onClick.RemoveListener(OnBackgroundClicked);
+            }
         }
     }
 }

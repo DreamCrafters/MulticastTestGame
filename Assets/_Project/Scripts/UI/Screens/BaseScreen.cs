@@ -21,6 +21,43 @@ namespace WordPuzzle.UI.Screens
         [Inject] protected IProgressService ProgressService { get; private set; }
         [Inject] protected ILevelService LevelService { get; private set; }
         
+        // Резервный доступ к сервисам для случаев, когда инжекция не сработала
+        protected IUIService GetUIService()
+        {
+            // Сначала пробуем инжектированный сервис
+            if (UIService != null) return UIService;
+            
+            GameLogger.LogError(ScreenName, "UIService not available through DI or ServiceLocator");
+            return null;
+        }
+        
+        protected IProgressService GetProgressService()
+        {
+            // Сначала пробуем инжектированный сервис
+            if (ProgressService != null) return ProgressService;
+            
+            GameLogger.LogError(ScreenName, "ProgressService not available through DI or ServiceLocator");
+            return null;
+        }
+        
+        protected ILevelService GetLevelService()
+        {
+            // Сначала пробуем инжектированный сервис
+            if (LevelService != null) return LevelService;
+            
+            GameLogger.LogError(ScreenName, "LevelService not available through DI or ServiceLocator");
+            return null;
+        }
+        
+        protected ISceneService GetSceneService()
+        {
+            // Сначала пробуем инжектированный сервис
+            if (SceneService != null) return SceneService;
+            
+            GameLogger.LogError(ScreenName, "SceneService not available through DI or ServiceLocator");
+            return null;
+        }
+        
         /// <summary>
         /// Название экрана для логирования
         /// </summary>
